@@ -3950,6 +3950,84 @@ function loadConfiguracion() {
         </div>
     `;
 }
+        async function migrarServiciosHardcodeados() {
+    showLoading();
+    
+    try {
+        console.log('📥 Iniciando migración de servicios...');
+        
+        // Verificar si ya existen servicios
+        const { data: serviciosExistentes, error: errorCheck } = await supabase
+            .from('services')
+            .select('id')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .limit(1);
+        
+        if (errorCheck) {
+            console.error('❌ Error verificando servicios:', errorCheck);
+            alert('Error del sistema: ' + errorCheck.message);
+            hideLoading();
+            return;
+        }
+        
+        if (serviciosExistentes && serviciosExistentes.length > 0) {
+            const confirmar = confirm('⚠️ Ya tienes servicios configurados.\n\n¿Quieres agregar los servicios por defecto adicionales?');
+            if (!confirmar) {
+                hideLoading();
+                return;
+            }
+        }
+        
+        // Servicios por defecto (los mismos del código actual)
+        const serviciosDefault = [
+            { nombre: 'Corte Tradicional - Estudiante', precio: 12000, orden: 1 },
+            { nombre: 'Corte Tijera', precio: 15000, orden: 2 },
+            { nombre: 'Fade - Degradados', precio: 18000, orden: 3 },
+            { nombre: 'Barba Rasurado', precio: 8000, orden: 4 },
+            { nombre: 'Perfilado Barba', precio: 10000, orden: 5 },
+            { nombre: 'Barba Premium', precio: 12000, orden: 6 },
+            { nombre: 'Rasurado de Barba con Vapor', precio: 15000, orden: 7 },
+            { nombre: 'Limpieza Facial Premium', precio: 20000, orden: 8 },
+            { nombre: 'Servicio Full', precio: 35000, orden: 9 },
+            { nombre: 'Cejas', precio: 5000, orden: 10 },
+            { nombre: 'Diseños', precio: 8000, orden: 11 },
+            { nombre: 'Líneas', precio: 5000, orden: 12 }
+        ];
+        
+        // Insertar servicios en la base de datos
+        const serviciosParaInsertar = serviciosDefault.map(servicio => ({
+            barberia_id: window.CURRENT_BARBERIA_ID,
+            nombre: servicio.nombre,
+            precio_sugerido: servicio.precio,
+            activo: true,
+            orden: servicio.orden
+        }));
+        
+        console.log('💾 Insertando servicios en BD...', serviciosParaInsertar);
+        
+        const { data, error } = await supabase
+            .from('services')
+            .insert(serviciosParaInsertar)
+            .select();
+        
+        if (error) {
+            console.error('❌ Error insertando servicios:', error);
+            alert('Error al importar servicios: ' + error.message);
+        } else {
+            console.log('✅ Servicios importados:', data);
+            alert(`✅ ¡Éxito! Se importaron ${serviciosDefault.length} servicios por defecto.\n\nYa puedes personalizar nombres y precios.`);
+            
+            // Recargar la lista de servicios
+            cargarServiciosConfigurados();
+        }
+        
+    } catch (error) {
+        console.error('❌ Error crítico:', error);
+        alert('Error del sistema: ' + error.message);
+    }
+    
+    hideLoading();
+}
         // ===============================
         // LOGOUT
         // ===============================
