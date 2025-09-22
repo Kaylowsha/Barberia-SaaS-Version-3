@@ -4058,12 +4058,11 @@ async function cargarServiciosDeBaseDatos() {
     try {
         console.log('📥 Iniciando migración de servicios...');
         
-        // Verificar si ya existen servicios
+     // Verificar si ya existen los servicios específicos para esta barbería
         const { data: serviciosExistentes, error: errorCheck } = await supabase
             .from('services')
-            .select('id')
-            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
-            .limit(1);
+            .select('nombre')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID);
         
         if (errorCheck) {
             console.error('❌ Error verificando servicios:', errorCheck);
@@ -4072,13 +4071,17 @@ async function cargarServiciosDeBaseDatos() {
             return;
         }
         
-        if (serviciosExistentes && serviciosExistentes.length > 0) {
-            const confirmar = confirm('⚠️ Ya tienes servicios configurados.\n\n¿Quieres agregar los servicios por defecto adicionales?');
-            if (!confirmar) {
-                hideLoading();
-                return;
-            }
+        // Verificar si ya tiene los servicios por defecto
+        const nombresExistentes = serviciosExistentes ? serviciosExistentes.map(s => s.nombre) : [];
+        const serviciosBasicos = ['Corte Tradicional - Estudiante', 'Fade - Degradados', 'Barba Rasurado'];
+        const yaImportados = serviciosBasicos.some(nombre => nombresExistentes.includes(nombre));
+        
+        if (yaImportados) {
+            alert('✅ Los servicios por defecto ya están importados para esta barbería.\n\nPuedes editarlos o agregar servicios personalizados.');
+            hideLoading();
+            return;
         }
+        
         
         // Servicios por defecto (los mismos del código actual)
         const serviciosDefault = [
