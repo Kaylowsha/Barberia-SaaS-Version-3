@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservar Cita - Barbería</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .slot-disponible {
+            @apply bg-gradient-to-r from-green-400 to-green-500 text-white font-semibold hover:from-green-500 hover:to-green-600 cursor-pointer transition-all duration-300 transform hover:scale-105 shadow-lg;
+        }
+        .slot-ocupado {
+            @apply bg-gray-200 text-gray-500 cursor-not-allowed;
+        }
+        .slot-seleccionado {
+            @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-xl transform scale-105;
+        }
+        .horarios-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .barbero-card {
+            @apply bg-white border-2 border-gray-200 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:border-blue-500 hover:shadow-lg;
+        }
+        .barbero-card.selected {
+            @apply border-blue-500 bg-blue-50 shadow-lg;
+        }
+        .step-indicator {
+            @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg shadow-lg;
+        }
+        .dia-calendario {
+            @apply w-10 h-10 rounded-lg flex items-center justify-center text-sm font-medium cursor-pointer transition-all duration-300;
+        }
+        .dia-disponible {
+            @apply bg-white text-gray-700 hover:bg-gradient-to-r hover:from-blue-400 hover:to-purple-500 hover:text-white shadow-sm hover:shadow-md transform hover:scale-105;
+        }
+        .dia-pasado {
+            @apply bg-gray-100 text-gray-400 cursor-not-allowed;
+        }
+        .dia-domingo {
+            @apply bg-red-100 text-red-500 cursor-not-allowed;
+        }
+        .dia-seleccionado {
+            @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-105;
+        }
+        .mes-otro {
+            @apply text-gray-300;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header Atractivo -->
+    <div class="gradient-bg text-white relative overflow-hidden">
+        <div class="absolute inset-0 bg-black opacity-10"></div>
+        <div class="relative max-w-md mx-auto text-center py-8 px-6">
+            <div class="mb-4">
+                <i class="fas fa-cut text-4xl mb-3 animate-pulse"></i>
+                <h1 class="text-3xl font-bold mb-2">¡Reserva tu Cita!</h1>
+                <p class="text-purple-100 text-lg" id="nombreBarberia">Cargando...</p>
+                <p class="text-purple-200 text-sm mt-2" id="debugInfo" style="display:none;"></p>
+            </div>
+            <!-- Progress Bar -->
+            <div class="mt-6">
+                <div class="flex justify-between items-center">
+                    <div id="indicator1" class="step-indicator">1</div>
+                    <div class="flex-1 h-2 bg-purple-300 mx-2 rounded-full">
+                        <div id="progress1" class="h-full bg-white rounded-full transition-all duration-500" style="width: 33%"></div>
+                    </div>
+                    <div id="indicator2" class="step-indicator opacity-50">2</div>
+                    <div class="flex-1 h-2 bg-purple-300 mx-2 rounded-full">
+                        <div id="progress2" class="h-full bg-white rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div id="indicator3" class="step-indicator opacity-50">3</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="max-w-md mx-auto px-4 -mt-4 relative z-10">
+        
+        <!-- PASO 1: Fecha y Horario -->
+        <div id="paso1" class="bg-white rounded-2xl card-shadow mb-6 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-calendar-alt mr-3"></i>
+                    ¿Cuándo te vemos?
+                </h2>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-3">📅 Selecciona la fecha</label>
+                    
+                    <!-- Calendario Visual -->
+                    <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border-2 border-blue-200">
+                        <!-- Header del Calendario -->
+                        <div class="flex items-center justify-between mb-4">
+                            <button type="button" onclick="cambiarMes(-1)" class="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all">
+                                <i class="fas fa-chevron-left text-gray-600"></i>
+                            </button>
+                            <h3 id="mesActual" class="text-lg font-bold text-gray-700"></h3>
+                            <button type="button" onclick="cambiarMes(1)" class="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all">
+                                <i class="fas fa-chevron-right text-gray-600"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Días de la Semana -->
+                        <div class="grid grid-cols-7 gap-1 mb-2">
+                            <div class="text-center text-xs font-bold text-gray-500 py-2">LUN</div>
+                            <div class="text-center text-xs font-bold text-gray-500 py-2">MAR</div>
+                            <div class="text-center text-xs font-bold text-gray-500 py-2">MIE</div>
+                            <div class="text-center text-xs font-bold text-gray-500 py-2">JUE</div>
+                            <div class="text-center text-xs font-bold text-gray-500 py-2">VIE</div>
+                            <div class="text-center text-xs font-bold text-gray-500 py-2">SAB</div>
+                            <div class="text-center text-xs font-bold text-red-400 py-2">DOM</div>
+                        </div>
+                        
+                        <!-- Grid de Días -->
+                        <div id="calendarioDias" class="grid grid-cols-7 gap-1">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                    
+                    <!-- Input oculto para compatibilidad -->
+                    <input type="date" id="fechaSeleccionada" class="hidden" onchange="cargarHorarios()">
+                </div>
+
+                <div id="horariosContainer" style="display:none;">
+                    <!-- Horarios Mañana -->
+                    <div class="mb-6">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-sun text-yellow-500 mr-2"></i>
+                            <span class="font-bold text-gray-700">Mañana (10:00 - 13:00)</span>
+                        </div>
+                        <div id="horariosMañana" class="horarios-grid">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Horarios Tarde -->
+                    <div class="mb-4">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-moon text-indigo-500 mr-2"></i>
+                            <span class="font-bold text-gray-700">Tarde (15:00 - 20:00)</span>
+                        </div>
+                        <div id="horariosTarde" class="horarios-grid">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PASO 2: Seleccionar Barbero -->
+        <div id="paso2" class="bg-white rounded-2xl card-shadow mb-6 overflow-hidden" style="display:none;">
+            <div class="bg-gradient-to-r from-green-500 to-teal-600 text-white p-4">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-user-tie mr-3"></i>
+                    ¿Con quién prefieres?
+                </h2>
+            </div>
+            
+            <div class="p-6">
+                <div id="barberosContainer" class="space-y-3">
+                    <!-- Se llenará dinámicamente con cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- PASO 3: Datos del Cliente -->
+        <div id="paso3" class="bg-white rounded-2xl card-shadow mb-6 overflow-hidden" style="display:none;">
+            <div class="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-4">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-user-edit mr-3"></i>
+                    Cuéntanos de ti
+                </h2>
+            </div>
+            
+            <div class="p-6">
+                <form id="formReserva">
+                    <div class="space-y-5">
+                        <div class="relative">
+                            <i class="fas fa-user absolute left-3 top-4 text-gray-400"></i>
+                            <input type="text" id="clienteNombre" 
+                                class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg" 
+                                placeholder="Tu nombre completo" required>
+                        </div>
+                        
+                        <div class="relative">
+                            <i class="fas fa-phone absolute left-3 top-4 text-gray-400"></i>
+                            <input type="tel" id="clienteTelefono" 
+                                class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg" 
+                                placeholder="+56 9 1234 5678" required>
+                        </div>
+                        
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-3 top-4 text-gray-400"></i>
+                            <input type="email" id="clienteEmail" 
+                                class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg" 
+                                placeholder="tu@email.com (opcional)">
+                            <span class="text-xs text-gray-500 mt-1 block">📧 Para enviarte la confirmación</span>
+                        </div>
+                        
+                        <div class="relative">
+                            <i class="fas fa-comment absolute left-3 top-4 text-gray-400"></i>
+                            <textarea id="clienteNotas" rows="3" 
+                                class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none" 
+                                placeholder="¿Algún estilo especial? (opcional)"></textarea>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 mt-6">
+                        <i class="fas fa-check mr-2"></i>¡Confirmar mi Cita!
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Resumen Final -->
+        <div id="resumenFinal" class="bg-gradient-to-br from-green-400 to-green-600 rounded-2xl card-shadow text-white overflow-hidden" style="display:none;">
+            <div class="p-6 text-center">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle text-6xl mb-4 animate-bounce"></i>
+                    <h2 class="text-3xl font-bold mb-2">¡Listo! 🎉</h2>
+                    <p class="text-green-100 text-lg">Tu cita está confirmada</p>
+                </div>
+                
+                <div id="detallesReserva" class="bg-white bg-opacity-20 backdrop-blur-sm rounded-xl p-5 mb-4 text-left">
+                    <!-- Se llenará con los detalles -->
+                </div>
+                
+                <div id="mensajeEmail" class="bg-white bg-opacity-20 backdrop-blur-sm rounded-xl p-3 mb-4" style="display:none;">
+                    <i class="fas fa-envelope mr-2"></i>
+                    <span class="text-sm">Confirmación enviada a tu email</span>
+                </div>
+                
+                <div class="space-y-3">
+                    <p class="text-green-100 font-medium text-lg">¡Nos vemos pronto! 👋</p>
+                    <p class="text-green-200 text-sm">
+                        💡 Guarda esta pantalla o toma screenshot
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Debug Info -->
+        <div id="debugPanel" class="bg-gray-800 text-white p-4 rounded-lg mt-4" style="display:none;">
+            <h3 class="font-bold mb-2">🔍 Debug Info</h3>
+            <div id="debugContent" class="text-sm space-y-1">
+                <!-- Se llenará con info de debug -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Moderno -->
+    <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 text-center card-shadow">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600 mx-auto mb-4"></div>
+            <p class="text-gray-700 font-medium">Confirmando tu cita...</p>
+            <p class="text-gray-500 text-sm mt-1">Solo un momento ✨</p>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let barberiaData = null;
+        let barberosDisponibles = [];
+        let fechaSeleccionada = null;
+        let horarioSeleccionado = null;
+        let barberoSeleccionado = null;
+        let fechaActual = new Date();
+        let mesVisualizando = new Date();
+        
+        // Configuración CORREGIDA
+        const SUPABASE_URL = 'https://uzmdreqbcacwkkfwpkui.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6bWRyZXFiY2Fjd2trZndwa3VpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MDU1MTMsImV4cCI6MjA3MzQ4MTUxM30.wSWo1uebanmw9rwzJGNGlzkgNBFggXHvEF4dj1uEm58';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Obtener ID de barbería de URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const barberiaId = urlParams.get('barberia') || '450e5ba0-6771-41fd-9003-2706aac125af'; // Rulos por defecto
+
+        const HORARIOS_MAÑANA = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30'];
+        const HORARIOS_TARDE = ['15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30'];
+
+        // Debug function
+        function debug(mensaje, data = null) {
+            console.log(`🔍 ${mensaje}`, data);
+            const debugContent = document.getElementById('debugContent');
+            if (debugContent) {
+                const timestamp = new Date().toLocaleTimeString();
+                const debugLine = document.createElement('div');
+                debugLine.innerHTML = `[${timestamp}] ${mensaje}${data ? ': ' + JSON.stringify(data, null, 2) : ''}`;
+                debugContent.appendChild(debugLine);
+            }
+        }
+
+        // Mostrar/ocultar debug
+        function toggleDebug() {
+            const panel = document.getElementById('debugPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Inicializar (MEJORADO)
+        window.addEventListener('load', async () => {
+            debug('🚀 Iniciando aplicación');
+            debug('URL actual', window.location.href);
+            debug('Barbería ID detectada', barberiaId);
+            
+            // Mostrar debug info en header
+            document.getElementById('debugInfo').textContent = `ID: ${barberiaId.substring(0, 8)}...`;
+            document.getElementById('debugInfo').style.display = 'block';
+            
+            await cargarDatosBarberia();
+            await cargarBarberos();
+            generarCalendario();
+            
+            // Double-click en header para mostrar debug completo
+            document.querySelector('.gradient-bg').addEventListener('dblclick', toggleDebug);
+        });
+
+        // FUNCIÓN CORREGIDA: Cargar datos barbería
+        async function cargarDatosBarberia() {
+            debug('📊 Cargando datos de barbería...');
+            
+            try {
+                // QUERY SIMPLIFICADA - Sin filtro activa
+                const { data, error } = await supabase
+                    .from('barberias')
+                    .select('*')  // Seleccionar todo para debug
+                    .eq('id', barberiaId);
+                    // ❌ REMOVIDO: .eq('activa', true)
+                    // ❌ REMOVIDO: .single()
+
+                debug('Respuesta Supabase', { data, error });
+
+                if (error) {
+                    debug('❌ Error Supabase', error);
+                    throw error;
+                }
+
+                if (data && data.length > 0) {
+                    const barberia = data[0];  // Tomar primer resultado
+                    debug('✅ Barbería encontrada', barberia);
+                    
+                    document.getElementById('nombreBarberia').textContent = barberia.nombre;
+                    barberiaData = barberia;
+                    
+                    // Verificar si está activa (sin bloquear)
+                    if (!barberia.activa) {
+                        debug('⚠️ Barbería inactiva pero permitiendo continuar');
+                        const warningDiv = document.createElement('div');
+                        warningDiv.className = 'bg-yellow-100 text-yellow-800 p-2 rounded-lg text-sm mt-2';
+                        warningDiv.textContent = '⚠️ Barbería en mantenimiento - Reservas limitadas';
+                        document.querySelector('.gradient-bg .relative').appendChild(warningDiv);
+                    }
+                } else {
+                    debug('❌ No se encontró barbería con ID', barberiaId);
+                    document.getElementById('nombreBarberia').textContent = 'Barbería no encontrada';
+                    
+                    // Mostrar IDs disponibles para debug
+                    const { data: todasBarberias } = await supabase
+                        .from('barberias')
+                        .select('id, nombre');
+                    
+                    debug('Barberías disponibles', todasBarberias);
+                }
+                
+            } catch (error) {
+                debug('❌ Error crítico cargando barbería', error);
+                console.error('Error cargando barbería:', error);
+                document.getElementById('nombreBarberia').textContent = 'Error de conexión';
+            }
+        }
+
+        // FUNCIÓN CORREGIDA: Cargar barberos  
+        async function cargarBarberos() {
+            debug('👥 Cargando barberos...');
+            
+            try {
+                // QUERY SIMPLIFICADA
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('*')  // Todo para debug
+                    .eq('barberia_id', barberiaId);
+                    // ❌ REMOVIDO filtro activo por ahora
+
+                debug('Respuesta barberos', { data, error });
+
+                if (error) {
+                    debug('❌ Error cargando barberos', error);
+                    throw error;
+                }
+
+                if (data && data.length > 0) {
+                    // Filtrar solo activos en JavaScript
+                    const barberosActivos = data.filter(b => b.activo === true);
+                    debug('✅ Barberos activos encontrados', barberosActivos);
+                    
+                    barberosDisponibles = barberosActivos;
+                    generarCardsBarberos(barberosActivos);
+                } else {
+                    debug('❌ No hay barberos para esta barbería');
+                    const container = document.getElementById('barberosContainer');
+                    container.innerHTML = '<div class="text-center text-red-500 p-4">❌ No hay barberos disponibles</div>';
+                }
+                
+            } catch (error) {
+                debug('❌ Error crítico cargando barberos', error);
+                console.error('Error cargando barberos:', error);
+            }
+        }
+
+        function generarCardsBarberos(barberos) {
+            const container = document.getElementById('barberosContainer');
+            container.innerHTML = '';
+
+            if (!barberos || barberos.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 p-4">❌ No hay barberos disponibles</div>';
+                return;
+            }
+
+            barberos.forEach((barbero, index) => {
+                const iconos = ['fas fa-user-tie', 'fas fa-male', 'fas fa-user-graduate'];
+                const colores = ['from-blue-400 to-blue-600', 'from-purple-400 to-purple-600', 'from-green-400 to-green-600'];
+                
+                const card = document.createElement('div');
+                card.className = 'barbero-card';
+                card.innerHTML = `
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-gradient-to-r ${colores[index % colores.length]} w-12 h-12 rounded-full flex items-center justify-center text-white">
+                            <i class="${iconos[index % iconos.length]}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-gray-800">${barbero.nombre}</h3>
+                            <p class="text-gray-500 text-sm">Barbero profesional</p>
+                        </div>
+                        <div class="text-green-500">
+                            <i class="fas fa-check-circle hidden selected-icon"></i>
+                        </div>
+                    </div>
+                `;
+                card.onclick = () => seleccionarBarbero(barbero.id, card);
+                container.appendChild(card);
+            });
+        }
+
+        function seleccionarBarbero(barberoId, cardElement) {
+            debug('👤 Barbero seleccionado', barberoId);
+            
+            // Limpiar selección previa
+            document.querySelectorAll('.barbero-card').forEach(card => {
+                card.classList.remove('selected');
+                card.querySelector('.selected-icon').classList.add('hidden');
+            });
+
+            // Seleccionar nuevo barbero
+            cardElement.classList.add('selected');
+            cardElement.querySelector('.selected-icon').classList.remove('hidden');
+            
+            barberoSeleccionado = barberoId;
+            actualizarProgreso(3);
+            mostrarPaso3();
+        }
+
+        function generarCalendario() {
+            const año = mesVisualizando.getFullYear();
+            const mes = mesVisualizando.getMonth();
+            
+            // Actualizar header
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            document.getElementById('mesActual').textContent = `${meses[mes]} ${año}`;
+            
+            // Obtener primer día del mes y días en el mes
+            const primerDia = new Date(año, mes, 1);
+            const ultimoDia = new Date(año, mes + 1, 0);
+            const diasEnMes = ultimoDia.getDate();
+            
+            // Ajustar inicio del calendario (Lunes = 0)
+            const inicioSemana = primerDia.getDay();
+            const diasInicioCalendario = inicioSemana === 0 ? 6 : inicioSemana - 1;
+            
+            const container = document.getElementById('calendarioDias');
+            container.innerHTML = '';
+            
+            // Días del mes anterior
+            const mesAnterior = new Date(año, mes, 0);
+            for (let i = diasInicioCalendario; i > 0; i--) {
+                const dia = mesAnterior.getDate() - i + 1;
+                const btn = crearDiaCalendario(dia, true, false, false);
+                container.appendChild(btn);
+            }
+            
+            // Días del mes actual
+            const hoy = new Date();
+            for (let dia = 1; dia <= diasEnMes; dia++) {
+                const fechaDia = new Date(año, mes, dia);
+                const esPasado = fechaDia < hoy;
+                const esDomingo = fechaDia.getDay() === 0;
+                const esHoy = fechaDia.toDateString() === hoy.toDateString();
+                
+                const btn = crearDiaCalendario(dia, false, esPasado || esDomingo, esHoy);
+                if (!esPasado && !esDomingo) {
+                    btn.onclick = () => seleccionarFecha(año, mes, dia);
+                }
+                container.appendChild(btn);
+            }
+            
+            // Días del mes siguiente para completar la grilla
+            const diasEnCalendario = container.children.length;
+            const diasFaltantes = 42 - diasEnCalendario; // 6 semanas × 7 días
+            for (let dia = 1; dia <= Math.min(diasFaltantes, 14); dia++) {
+                const btn = crearDiaCalendario(dia, true, false, false);
+                container.appendChild(btn);
+            }
+        }
+
+        function crearDiaCalendario(dia, esOtroMes, esInhabilitado, esHoy) {
+            const btn = document.createElement('div');
+            btn.className = 'dia-calendario';
+            btn.textContent = dia;
+            
+            if (esOtroMes) {
+                btn.classList.add('mes-otro', 'dia-pasado');
+            } else if (esInhabilitado) {
+                const esDomingo = new Date(mesVisualizando.getFullYear(), mesVisualizando.getMonth(), dia).getDay() === 0;
+                btn.classList.add(esDomingo ? 'dia-domingo' : 'dia-pasado');
+            } else {
+                btn.classList.add('dia-disponible');
+                if (esHoy) {
+                    btn.classList.add('ring-2', 'ring-yellow-400');
+                }
+            }
+            
+            return btn;
+        }
+
+        function cambiarMes(direccion) {
+            mesVisualizando.setMonth(mesVisualizando.getMonth() + direccion);
+            
+            // No permitir ir a meses pasados
+            const hoy = new Date();
+            if (mesVisualizando.getFullYear() < hoy.getFullYear() || 
+                (mesVisualizando.getFullYear() === hoy.getFullYear() && mesVisualizando.getMonth() < hoy.getMonth())) {
+                mesVisualizando = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            }
+            
+            generarCalendario();
+        }
+
+        function seleccionarFecha(año, mes, dia) {
+            debug('📅 Fecha seleccionada', `${año}-${mes+1}-${dia}`);
+            
+            // Limpiar selección previa
+            document.querySelectorAll('.dia-seleccionado').forEach(el => {
+                el.classList.remove('dia-seleccionado');
+                el.classList.add('dia-disponible');
+            });
+            
+            // Seleccionar nuevo día
+            event.target.classList.remove('dia-disponible');
+            event.target.classList.add('dia-seleccionado');
+            
+            // Establecer fecha seleccionada
+            const fecha = new Date(año, mes, dia);
+            const fechaString = fecha.toISOString().split('T')[0];
+            
+            document.getElementById('fechaSeleccionada').value = fechaString;
+            fechaSeleccionada = fechaString;
+            
+            // Cargar horarios después de un pequeño delay para el efecto visual
+            setTimeout(() => {
+                cargarHorarios();
+            }, 300);
+        }
+
+        function cargarHorarios() {
+            const fecha = document.getElementById('fechaSeleccionada').value;
+            if (!fecha) return;
+
+            debug('⏰ Cargando horarios para', fecha);
+            
+            fechaSeleccionada = fecha;
+            const fechaObj = new Date(fecha + 'T00:00:00');
+            const diaSemana = fechaObj.getDay();
+
+            if (diaSemana === 0) {
+                alert('❌ Los domingos estamos cerrados. Por favor selecciona otro día.');
+                document.getElementById('fechaSeleccionada').value = '';
+                return;
+            }
+
+            document.getElementById('horariosContainer').style.display = 'block';
+            generarHorarios('horariosMañana', HORARIOS_MAÑANA);
+            generarHorarios('horariosTarde', HORARIOS_TARDE);
+        }
+
+        function generarHorarios(containerId, horarios) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            horarios.forEach(hora => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'slot-disponible px-3 py-3 rounded-xl text-sm font-bold';
+                btn.textContent = hora;
+                btn.onclick = () => seleccionarHorario(hora, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function seleccionarHorario(hora, elemento) {
+            debug('⏰ Horario seleccionado', hora);
+            
+            document.querySelectorAll('.slot-seleccionado').forEach(el => {
+                el.classList.remove('slot-seleccionado');
+                el.classList.add('slot-disponible');
+            });
+
+            elemento.classList.remove('slot-disponible');
+            elemento.classList.add('slot-seleccionado');
+            
+            horarioSeleccionado = hora;
+            actualizarProgreso(2);
+            mostrarPaso2();
+        }
+
+        function mostrarPaso2() {
+            if (!horarioSeleccionado) return;
+            debug('➡️ Mostrando paso 2 - Barberos');
+            document.getElementById('paso2').style.display = 'block';
+            document.getElementById('paso2').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function mostrarPaso3() {
+            if (!barberoSeleccionado) return;
+            debug('➡️ Mostrando paso 3 - Datos cliente');
+            document.getElementById('paso3').style.display = 'block';
+            document.getElementById('paso3').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function actualizarProgreso(paso) {
+            debug(`📊 Actualizando progreso a paso ${paso}`);
+            
+            // Actualizar indicadores
+            for (let i = 1; i <= paso; i++) {
+                const indicator = document.getElementById(`indicator${i}`);
+                indicator.classList.add('paso-completado');
+                indicator.classList.remove('opacity-50');
+            }
+
+            // Actualizar barras de progreso
+            const progresos = {1: '33%', 2: '66%', 3: '100%'};
+            for (let i = 1; i <= paso; i++) {
+                const progressBar = document.getElementById(`progress${i}`);
+                if (progressBar) {
+                    progressBar.style.width = progresos[i] || '0%';
+                }
+            }
+        }
+
+        // Inicializar EmailJS
+        emailjs.init("IEVjMyCxhl0W0COei"); // Tu Public Key
+
+        // Manejar envío del formulario
+        document.getElementById('formReserva').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await procesarReserva();
+        });
+
+        async function procesarReserva() {
+            debug('📝 Procesando reserva...');
+            
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+
+            try {
+                const nombre = document.getElementById('clienteNombre').value;
+                const telefono = document.getElementById('clienteTelefono').value;
+                const email = document.getElementById('clienteEmail').value;
+                const notas = document.getElementById('clienteNotas').value;
+
+                const barbero = barberosDisponibles.find(b => b.id === barberoSeleccionado);
+                
+                const reserva = {
+                    fecha: fechaSeleccionada,
+                    hora: horarioSeleccionado,
+                    barberia_id: barberiaId,
+                    barberia_nombre: barberiaData.nombre,
+                    barbero_id: barberoSeleccionado,
+                    barbero_nombre: barbero.nombre,
+                    cliente_nombre: nombre,
+                    cliente_telefono: telefono,
+                    cliente_email: email || null,
+                    notas: notas || null,
+                    created_at: new Date().toISOString()
+                };
+
+                debug('💾 Datos de reserva a guardar', reserva);
+
+                // TODO: Aquí iría la integración con Google Sheets
+                await guardarReserva(reserva);
+
+                // Enviar email si hay dirección
+                if (email) {
+                    debug('📧 Enviando confirmación por email...');
+                    await enviarEmailConfirmacion(reserva);
+                }
+
+                mostrarResumen(reserva);
+
+            } catch (error) {
+                debug('❌ Error procesando reserva', error);
+                console.error('Error:', error);
+                alert('❌ Error al procesar la reserva. Intenta nuevamente.');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        async function guardarReserva(reserva) {
+    debug('💾 Guardando reserva en Supabase...', reserva);
+    
+    try {
+        // Preparar datos para Supabase
+        const reservaData = {
+            barberia_id: reserva.barberia_id,
+            barbero_id: reserva.barbero_id,
+            barbero_nombre: reserva.barbero_nombre,
+            fecha: reserva.fecha,
+            hora: reserva.hora,
+            cliente_nombre: reserva.cliente_nombre,
+            cliente_telefono: reserva.cliente_telefono,
+            cliente_email: reserva.cliente_email || null,
+            notas: reserva.notas || null,
+            estado: 'pendiente',
+            confirmada: false
+        };
+        
+        debug('📤 Enviando a Supabase:', reservaData);
+        
+        // Insertar en Supabase
+        const { data, error } = await supabase
+            .from('reservas')
+            .insert([reservaData])
+            .select()
+            .single();
+        
+        if (error) {
+            debug('❌ Error de Supabase', error);
+            throw new Error('Error guardando reserva: ' + error.message);
+        }
+        
+        debug('✅ Reserva guardada exitosamente en Supabase', data);
+        
+        // También enviar email de notificación al admin (opcional)
+        // await enviarEmailNotificacionAdmin(reservaData);
+        
+        return data;
+        
+    } catch (error) {
+        debug('❌ Error crítico guardando reserva', error);
+        throw error; // Re-lanzar para manejo en procesarReserva
+    }
+}
+
+        async function enviarEmailConfirmacion(reserva) {
+            try {
+                debug('📧 Preparando email de confirmación...');
+                
+                // Formatear fecha para el email
+                const fechaFormateada = new Date(reserva.fecha + 'T00:00:00').toLocaleDateString('es-CL', {
+                    weekday: 'long',
+                    day: 'numeric', 
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                // Parámetros para el template de EmailJS
+                const templateParams = {
+                    to_email: reserva.cliente_email,
+                    cliente_nombre: reserva.cliente_nombre,
+                    barberia_nombre: reserva.barberia_nombre,
+                    barbero_nombre: reserva.barbero_nombre,
+                    fecha_formateada: fechaFormateada,
+                    hora: reserva.hora,
+                    cliente_telefono: reserva.cliente_telefono,
+                    notas: reserva.notas || 'Sin notas especiales'
+                };
+
+                debug('📤 Enviando email con datos:', templateParams);
+                
+                // Enviar email usando EmailJS
+                const response = await emailjs.send(
+                    'service_yk46u6o',     // Service ID
+                    'template_ylwzsso',    // Template ID  
+                    templateParams
+                );
+                
+                debug('✅ Email enviado exitosamente', response);
+                return true;
+                
+            } catch (error) {
+                debug('❌ Error enviando email', error);
+                console.error('Error enviando email:', error);
+                
+                // No lanzar error - el email es opcional
+                return false;
+            }
+        }
+
+        function mostrarResumen(reserva) {
+            debug('📋 Mostrando resumen final');
+            
+            const fechaFormateada = new Date(reserva.fecha + 'T00:00:00').toLocaleDateString('es-CL', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            document.getElementById('detallesReserva').innerHTML = `
+                <div class="space-y-3 text-white">
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar-day w-6 text-white mr-3"></i>
+                        <span><strong>Fecha:</strong> ${fechaFormateada}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-clock w-6 text-white mr-3"></i>
+                        <span><strong>Hora:</strong> ${reserva.hora}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-user-tie w-6 text-white mr-3"></i>
+                        <span><strong>Barbero:</strong> ${reserva.barbero_nombre}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-user w-6 text-white mr-3"></i>
+                        <span><strong>Cliente:</strong> ${reserva.cliente_nombre}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-store w-6 text-white mr-3"></i>
+                        <span><strong>Barbería:</strong> ${reserva.barberia_nombre}</span>
+                    </div>
+                    ${reserva.notas ? `
+                        <div class="flex items-start">
+                            <i class="fas fa-comment w-6 text-white mr-3 mt-1"></i>
+                            <span><strong>Notas:</strong> ${reserva.notas}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            if (reserva.cliente_email) {
+                document.getElementById('mensajeEmail').style.display = 'block';
+            }
+
+            // Ocultar pasos y mostrar resumen
+            document.getElementById('paso1').style.display = 'none';
+            document.getElementById('paso2').style.display = 'none';
+            document.getElementById('paso3').style.display = 'none';
+            document.getElementById('resumenFinal').style.display = 'block';
+
+            document.getElementById('resumenFinal').scrollIntoView({ behavior: 'smooth' });
+            
+            debug('🎉 Proceso completado exitosamente');
+        }
+
+        // Event listeners adicionales
+        document.addEventListener('DOMContentLoaded', () => {
+            debug('🎬 DOM completamente cargado');
+        });
+
+        // Manejo de errores globales
+        window.addEventListener('error', (e) => {
+            debug('❌ Error global capturado', e.error);
+        });
+    </script>
+</body>
+</html>

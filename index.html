@@ -1,0 +1,3975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbería SaaS - Sistema de Gestión</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Configuración -->
+    <script src="config.js"></script>
+    
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Animaciones personalizadas */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full fade-in">
+            <div class="text-center mb-8">
+                <i class="fas fa-cut text-6xl text-blue-600 mb-4"></i>
+                <h1 class="text-3xl font-bold text-gray-800">Barbería SaaS</h1>
+                <p class="text-gray-600 mt-2">Sistema de Gestión Profesional</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-envelope mr-2"></i>Email
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="tu@email.com"
+                        required
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-2"></i>Contraseña
+                    </label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="••••••••"
+                        required
+                    >
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-200"
+                >
+                    <i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión
+                </button>
+            </form>
+            
+            <div id="loginError" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg hidden">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                <span id="loginErrorText"></span>
+            </div>
+            
+            <div class="mt-6 text-center text-sm text-gray-600">
+                <p>¿Primera vez? Contacta al administrador</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pantalla Principal (oculta inicialmente) -->
+    <div id="mainApp" class="hidden">
+        <!-- Barra de Navegación -->
+        <nav class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-cut text-2xl text-blue-600 mr-3"></i>
+                        <span class="font-bold text-xl">Barbería SaaS</span>
+                        <span id="barberiaName" class="ml-4 text-gray-600"></span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <span id="userName" class="text-gray-700"></span>
+                        <span id="userRole" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"></span>
+                        <button onclick="logout()" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-sign-out-alt"></i> Salir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Alerta de Trial -->
+        <div id="trialAlert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 p-4">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-yellow-700 mr-3"></i>
+                <p id="trialMessage" class="text-yellow-700"></p>
+            </div>
+        </div>
+        
+        <!-- Tabs de Navegación -->
+        <div class="bg-white border-b">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex space-x-1 overflow-x-auto py-2" id="tabContainer">
+                    <!-- Los tabs se generarán dinámicamente según el rol -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div id="contentArea" class="bg-white rounded-lg shadow p-6">
+                <!-- El contenido se cargará dinámicamente -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-4 text-gray-600">Cargando...</p>
+        </div>
+    </div>
+    
+    <!-- Script Principal -->
+    <script>
+        // ===============================
+        // CONFIGURACIÓN DE SUPABASE
+        // ===============================
+        const SUPABASE_URL = SUPABASE_CONFIG.url;
+        const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Variables globales
+        let currentUser = null;
+        let currentBarberia = null;
+        let userRole = null;
+
+// ===============================
+// FUNCIONES DE FECHA CHILE
+// ===============================
+function getFechaChile() {
+    const ahora = new Date();
+    const fechaChile = new Date(ahora.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+    const año = fechaChile.getFullYear();
+    const mes = String(fechaChile.getMonth() + 1).padStart(2, '0');
+    const dia = String(fechaChile.getDate()).padStart(2, '0');
+    return `${año}-${mes}-${dia}`;
+}
+
+function getTimestampChile() {
+    const ahora = new Date();
+    const fechaChile = new Date(ahora.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+    return fechaChile.toISOString();
+}
+
+function parseFechaChile(fechaString) {
+    const [año, mes, dia] = fechaString.split('-');
+    return new Date(parseInt(año), parseInt(mes) - 1, parseInt(dia));
+}
+        // ===============================
+        // FUNCIONES DE AUTENTICACIÓN
+        // ===============================
+     document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    
+    showLoading();
+    hideError();
+    
+    try {
+        // LOGIN DINÁMICO - Consultas separadas para evitar RLS
+        console.log('🔍 Buscando usuario:', email);
+        
+       // Buscar usuario por email (sin filtrar por activo todavía)
+const { data: usuarios, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('email', email)
+    .single();
+
+if (error || !usuarios) {
+    console.error('❌ Usuario no encontrado:', error);
+    showError('Usuario no encontrado.');
+    hideLoading();
+    return;
+}
+
+// AHORA verificar si está activo
+if (!usuarios.activo) {
+    console.log('⚠️ Usuario inactivo:', usuarios.nombre);
+    showError('Tu cuenta está inactiva. Contacta al administrador.');
+    hideLoading();
+    return;
+}
+
+console.log('✅ Usuario encontrado:', usuarios.nombre);
+
+        if (error || !usuarios) {
+            console.error('❌ Usuario no encontrado:', error);
+            showError('Usuario no encontrado o inactivo.');
+            hideLoading();
+            return;
+        }
+        
+        console.log('✅ Usuario encontrado:', usuarios.nombre);
+
+        // Consultar barbería por separado
+        console.log('🔍 Buscando barbería ID:', usuarios.barberia_id);
+        
+        const { data: barberia, error: errorBarberia } = await supabase
+            .from('barberias')
+            .select('id, nombre, plan, trial_hasta, activa')
+            .eq('id', usuarios.barberia_id)
+            .single();
+
+       if (errorBarberia || !barberia) {
+    console.error('❌ Barbería no encontrada:', errorBarberia);
+    showError('Error del sistema. Contacta soporte.');
+    hideLoading();
+    return;
+}
+
+// Verificar si la barbería está activa
+if (!barberia.activa) {
+    console.log('⚠️ Barbería inactiva:', barberia.nombre);
+    
+    // Verificar si es por trial vencido
+    if (barberia.plan === 'trial' && barberia.trial_hasta) {
+        const hoy = new Date();
+        const trialHasta = new Date(barberia.trial_hasta);
+        if (hoy > trialHasta) {
+            showError('Tu período de prueba ha terminado. Contacta al administrador para activar tu cuenta.');
+        } else {
+            showError('Tu barbería está temporalmente inactiva. Contacta al administrador.');
+        }
+    } else {
+        showError('Tu barbería está inactiva. Contacta al administrador para reactivarla.');
+    }
+    hideLoading();
+    return;
+}
+        
+        console.log('✅ Barbería encontrada:', barberia.nombre);
+
+        // Simular verificación de contraseña (temporal)
+        if (password !== '123456') {
+            showError('Contraseña incorrecta.');
+            hideLoading();
+            return;
+        }
+
+        // Login exitoso - Datos dinámicos reales
+        const userData = {
+            id: usuarios.id,
+            email: usuarios.email,
+            nombre: usuarios.nombre,
+            role: usuarios.role,
+            barberia_id: usuarios.barberia_id,
+            barberias: barberia  // Asignar barbería correctamente
+        };
+
+        // Crear variables globales dinámicas (SIN DUPLICAR)
+        window.CURRENT_BARBERIA_DATA = barberia;
+        window.CURRENT_BARBERIA_ID = barberia.id;
+        
+        console.log('🎯 Variables globales establecidas:', {
+            barberia_id: window.CURRENT_BARBERIA_ID,
+            barberia_nombre: window.CURRENT_BARBERIA_DATA.nombre
+        });
+        
+        // Asignar a variables globales del sistema
+        currentUser = userData;
+        currentBarberia = barberia;  // Usar barberia directamente
+        userRole = userData.role;
+        
+        // Guardar en localStorage
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        localStorage.setItem('userRole', userRole);
+        
+        console.log('✅ Login exitoso, iniciando aplicación...');
+        // VALIDACIÓN FINAL antes de inicializar
+        console.log('🔍 VALIDACIÓN FINAL:', {
+            'window.CURRENT_BARBERIA_ID': window.CURRENT_BARBERIA_ID,
+            'window.CURRENT_BARBERIA_DATA': window.CURRENT_BARBERIA_DATA,
+            'currentUser.barberia_id': currentUser.barberia_id,
+            'currentBarberia.id': currentBarberia.id
+        });
+        
+        if (!window.CURRENT_BARBERIA_ID) {
+            console.error('❌ CRÍTICO: barberia_id perdido antes de inicializar app');
+            alert('Error crítico: barberia_id no disponible. Recarga la página.');
+            return;
+        }
+        initializeApp();
+        
+    } catch (error) {
+        console.error('❌ Error general:', error);
+        showError('Error al iniciar sesión. Intenta nuevamente.');
+    }
+    
+    hideLoading();
+});
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('loginError');
+            const errorText = document.getElementById('loginErrorText');
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+        
+        function hideError() {
+            document.getElementById('loginError').classList.add('hidden');
+        }
+        
+        function showLoading() {
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingSpinner').classList.add('hidden');
+        }
+        
+        // ===============================
+        // INICIALIZACIÓN DE LA APP
+        // ===============================
+        function initializeApp() {
+            // DEBUG: Verificar estado al inicializar
+            console.log('🔍 ESTADO AL INICIALIZAR APP:', {
+                'window.CURRENT_BARBERIA_ID': window.CURRENT_BARBERIA_ID,
+                'currentUser': currentUser,
+                'currentBarberia': currentBarberia
+            });
+            // Ocultar login, mostrar app
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            // Actualizar información del usuario
+            document.getElementById('userName').textContent = currentUser.nombre;
+            document.getElementById('userRole').textContent = userRole === 'admin' ? 'Administrador' : 'Empleado';
+            
+         // Actualizar información de barbería con datos reales
+const barberiaInfo = window.CURRENT_BARBERIA_DATA;
+if (barberiaInfo && barberiaInfo.nombre) {
+    document.getElementById('barberiaName').textContent = barberiaInfo.nombre;
+    console.log('✅ Barbería cargada:', barberiaInfo.nombre, 'Plan:', barberiaInfo.plan || 'Sin plan');
+} else {
+    document.getElementById('barberiaName').textContent = '';
+    console.log('⚠️ No se pudo cargar información de barbería');
+}
+            
+            // Verificar y mostrar alerta de trial si aplica
+            checkTrialStatus();
+            
+            // Generar tabs según el rol
+            generateTabs();
+            
+            // Cargar la primera pestaña
+            loadTab('registrar');
+        }
+        
+       async function checkTrialStatus() {
+    const barberiaData = window.CURRENT_BARBERIA_DATA;
+    if (barberiaData && barberiaData.plan === 'trial') {
+        document.getElementById('trialAlert').classList.remove('hidden');
+        
+        // Calcular días restantes reales
+        const diasRestantes = calcularDiasRestantes(barberiaData.trial_hasta);
+        const mensaje = diasRestantes > 0 
+            ? `Período de prueba activo. ${diasRestantes} días restantes.`
+            : 'Período de prueba EXPIRADO. Contacta al administrador.';
+            
+        document.getElementById('trialMessage').textContent = mensaje;
+        console.log('⏰ Trial status:', mensaje);
+    }
+}
+
+// Función auxiliar para calcular días restantes
+function calcularDiasRestantes(fechaHasta) {
+    if (!fechaHasta) return 0;
+    const hoy = new Date(getFechaChile());
+    const hasta = new Date(fechaHasta);
+    const diferencia = hasta.getTime() - hoy.getTime();
+    const dias = Math.ceil(diferencia / (1000 * 3600 * 24));
+    return Math.max(0, dias);
+}
+        
+        // ===============================
+        // GENERACIÓN DE TABS
+        // ===============================
+       function generateTabs() {
+    const tabContainer = document.getElementById('tabContainer');
+    const tabs = [];
+    
+    // Tabs comunes para todos
+    tabs.push(
+        { id: 'registrar', label: 'Registrar Servicio', icon: 'fa-plus-circle' },
+        { id: 'resumen', label: 'Resumen', icon: 'fa-chart-bar' },
+        { id: 'servicios', label: 'Servicios', icon: 'fa-list' },
+        { id: 'agenda', label: 'Agenda', icon: 'fa-calendar-alt' }  // ← NUEVA TAB PARA TODOS
+    );
+    
+    // Tabs exclusivos del admin
+    if (userRole === 'admin') {
+        tabs.push(
+            { id: 'barberos', label: 'Gestión Barberos', icon: 'fa-users' },
+            { id: 'cierre', label: 'Cierre de Caja', icon: 'fa-cash-register' },
+            { id: 'estadisticas', label: 'Estadísticas', icon: 'fa-chart-line' },
+            { id: 'configuracion', label: 'Configuración', icon: 'fa-cog' }
+        );
+    }
+    
+    // Generar HTML de tabs
+    tabContainer.innerHTML = tabs.map(tab => `
+        <button 
+            onclick="loadTab('${tab.id}')"
+            id="tab-${tab.id}"
+            class="px-4 py-2 rounded-t-lg font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors tab-button"
+        >
+            <i class="fas ${tab.icon} mr-2"></i>${tab.label}
+        </button>
+    `).join('');
+}
+        // ===============================
+        // NAVEGACIÓN ENTRE TABS
+        // ===============================
+        function loadTab(tabId) {
+            // Actualizar estado visual de tabs
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('text-gray-600');
+            });
+            
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if (activeTab) {
+                activeTab.classList.remove('text-gray-600');
+                activeTab.classList.add('bg-blue-600', 'text-white');
+            }
+            
+            // Cargar contenido según el tab
+            switch(tabId) {
+                case 'registrar':
+                    loadRegistrarServicio();
+                    break;
+                case 'resumen':
+                    loadResumen();
+                    break;
+                case 'servicios':
+                    loadServicios();
+                    break;
+                case 'barberos':
+                    loadGestionBarberos();
+                    break;
+                case 'cierre':
+                    loadCierreCaja();
+                    break;
+                case 'estadisticas':
+                    loadEstadisticas();
+                    break;
+                case 'configuracion':
+                    loadConfiguracion();
+                    break;
+                case 'agenda':
+                    loadAgenda();
+                    break;
+                default:
+                    document.getElementById('contentArea').innerHTML = '<p>Sección en desarrollo...</p>';
+            }
+        }
+        
+        // ===============================
+        // PESTAÑA: REGISTRAR SERVICIO
+        // ===============================
+        function loadRegistrarServicio() {
+            document.getElementById('contentArea').innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6">
+                        <i class="fas fa-plus-circle mr-2"></i>Registrar Nuevo Servicio
+                    </h2>
+                    
+                    <form id="registroForm" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Servicio Principal *
+                            </label>
+                            <select id="servicioPrincipal" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Selecciona un servicio...</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Servicio Adicional (opcional)
+                            </label>
+                            <select id="servicioAdicional" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Ninguno</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Monto Cobrado *
+                            </label>
+                            <input type="number" id="monto" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="$" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Forma de Pago *
+                            </label>
+                            <select id="formaPago" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Selecciona...</option>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Cuenta RUT">Cuenta RUT</option>
+                                <option value="Mercado Pago">Mercado Pago</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Notas (opcional)
+                            </label>
+                            <textarea id="notas" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Observaciones adicionales..."></textarea>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-200">
+                            <i class="fas fa-save mr-2"></i>Registrar Servicio
+                        </button>
+                    </form>
+                </div>
+            `;
+            
+            // Cargar servicios disponibles
+            loadServiciosDropdown();
+            
+            // Agregar evento al formulario
+            document.getElementById('registroForm').addEventListener('submit', registrarServicio);
+        }
+        
+        async function loadServiciosDropdown() {
+            // Temporalmente usar servicios hardcodeados
+            const servicios = [
+                { id: 1, nombre: 'Corte Tradicional - Estudiante', precio_sugerido: 12000 },
+                { id: 2, nombre: 'Corte Tijera', precio_sugerido: 15000 },
+                { id: 3, nombre: 'Fade - Degradados', precio_sugerido: 18000 },
+                { id: 4, nombre: 'Barba Rasurado', precio_sugerido: 8000 },
+                { id: 5, nombre: 'Perfilado Barba', precio_sugerido: 10000 },
+                { id: 6, nombre: 'Barba Premium', precio_sugerido: 12000 },
+                { id: 7, nombre: 'Rasurado de Barba con Vapor', precio_sugerido: 15000 },
+                { id: 8, nombre: 'Limpieza Facial Premium', precio_sugerido: 20000 },
+                { id: 9, nombre: 'Servicio Full', precio_sugerido: 35000 },
+                { id: 10, nombre: 'Cejas', precio_sugerido: 5000 },
+                { id: 11, nombre: 'Diseños', precio_sugerido: 8000 },
+                { id: 12, nombre: 'Líneas', precio_sugerido: 5000 }
+            ];
+            
+            const options = servicios.map(s => 
+                `<option value="${s.id}" data-precio="${s.precio_sugerido}">${s.nombre}</option>`
+            ).join('');
+            
+            document.getElementById('servicioPrincipal').innerHTML += options;
+            document.getElementById('servicioAdicional').innerHTML += options;
+        }
+        
+        async function registrarServicio(e) {
+            e.preventDefault();
+            
+            showLoading();
+            
+            const servicioPrincipal = document.getElementById('servicioPrincipal');
+            const servicioAdicional = document.getElementById('servicioAdicional');
+            const monto = document.getElementById('monto').value;
+            const formaPago = document.getElementById('formaPago').value;
+            const notas = document.getElementById('notas').value;
+            
+            // Validaciones
+            if (!servicioPrincipal.value || !monto || !formaPago) {
+                alert('Por favor completa todos los campos obligatorios');
+                hideLoading();
+                return;
+            }
+            
+            try {
+
+                // VALIDACIÓN CRÍTICA DEL barberia_id
+    if (!window.CURRENT_BARBERIA_ID) {
+        console.error('❌ CURRENT_BARBERIA_ID no está definido');
+        console.error('❌ currentUser:', currentUser);
+        console.error('❌ currentBarberia:', currentBarberia);
+        console.error('❌ window.CURRENT_BARBERIA_DATA:', window.CURRENT_BARBERIA_DATA);
+        alert('Error del sistema: No se puede identificar la barbería. Por favor, cierra sesión e inicia sesión nuevamente.');
+        hideLoading();
+        return;
+    }
+
+    console.log('✅ Validación barberia_id exitosa:', window.CURRENT_BARBERIA_ID);
+                
+                // Obtener el último código usado en esta barbería
+                console.log('🔢 Obteniendo último código de la barbería...');
+                const { data: ultimoCodigo, error: errorCodigo } = await supabase
+                    .from('citas')
+                    .select('codigo_diario')
+                    .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+                    .order('codigo_diario', { ascending: false })
+                    .limit(1);
+
+                let nuevoCodigo = 1; // Código por defecto para el primer servicio
+                
+                if (errorCodigo) {
+                    console.log('⚠️ Error consultando códigos (usando 1):', errorCodigo.message);
+                } else if (ultimoCodigo && ultimoCodigo.length > 0 && ultimoCodigo[0].codigo_diario) {
+                    nuevoCodigo = ultimoCodigo[0].codigo_diario + 1;
+                    console.log('✅ Último código encontrado:', ultimoCodigo[0].codigo_diario, '→ Nuevo:', nuevoCodigo);
+                } else {
+                    console.log('📝 Primera vez de la barbería, usando código 1');
+                }
+
+
+                   const nuevoServicio = {
+    barberia_id: window.CURRENT_BARBERIA_ID,
+    realizado_por_id: currentUser.id,
+    realizado_por_nombre: currentUser.nombre,
+    servicio_principal_id: parseInt(servicioPrincipal.value),
+    servicio_principal_nombre: servicioPrincipal.options[servicioPrincipal.selectedIndex].text,
+    servicio_adicional_id: servicioAdicional.value ? parseInt(servicioAdicional.value) : null,
+    servicio_adicional_nombre: servicioAdicional.value ? servicioAdicional.options[servicioAdicional.selectedIndex].text : null,
+    monto_total: parseFloat(monto),
+    forma_pago: formaPago,
+    notas: notas || null,
+    fecha: getFechaChile(),
+    created_at: getTimestampChile()
+};
+                
+                console.log('Guardando servicio:', nuevoServicio);
+                
+                const { data, error } = await supabase
+                    .from('citas')
+                    .insert([nuevoServicio])
+                    .select();
+                
+                if (error) {
+                    console.error('Error de Supabase:', error);
+                    alert('Error al guardar: ' + error.message);
+                } else {
+                    alert('✅ Servicio registrado exitosamente! Código: #' + (data[0].codigo_diario || data[0].id));
+                    document.getElementById('registroForm').reset();
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al registrar el servicio: ' + error.message);
+            }
+            
+            hideLoading();
+        }
+        
+        // ===============================
+        // PESTAÑA: RESUMEN
+        // ===============================
+    function loadResumen() {
+    document.getElementById('contentArea').innerHTML = `
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6">
+                <i class="fas fa-chart-bar mr-2"></i>Resumen
+            </h2>
+            
+            <!-- Selector de Vista -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Vista:</label>
+                <select id="vistaResumen" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cambiarVistaResumen()">
+                    <option value="diaria">Vista Diaria</option>
+                    <option value="semanal">Vista Semanal</option>
+                    <option value="mensual">Vista Mensual</option>
+                </select>
+            </div>
+
+            <!-- Filtro de Barbero (solo para admin) -->
+            <div id="filtroBarberoResumen" class="mb-4" style="display:none;">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Barbero:</label>
+                <select id="selectBarberoResumen" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosResumen()">
+                    <option value="todos">Ver Todos</option>
+                    <option value="mi">Mi Resumen</option>
+                </select>
+            </div>
+
+            <!-- Contenedor de Fechas -->
+            <div id="contenedorFechas" class="mb-4">
+                <label id="labelFechaResumen" class="block text-sm font-medium text-gray-700 mb-2">Fecha:</label>
+                <input type="date" id="fechaResumen" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosResumen()">
+            </div>
+
+            <!-- Contenedor del Resumen -->
+            <div id="contenidoResumen" class="mt-6">
+                <div class="text-center py-8">
+                    <div class="loading-spinner mx-auto"></div>
+                    <p class="mt-4 text-gray-600">Cargando resumen...</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Configurar fecha inicial y cargar datos
+    setTimeout(function() {
+        const fechaInput = document.getElementById('fechaResumen');
+        if (fechaInput) {
+            fechaInput.value = getFechaChile();
+        }
+        
+        // Si es admin, mostrar filtro de barberos
+        if (userRole === 'admin') {
+            document.getElementById('filtroBarberoResumen').style.display = 'block';
+            cargarBarberosEnFiltro();
+        }
+        
+        // Cargar datos del resumen
+        cargarDatosResumen();
+    }, 100);
+}
+        
+       async function cargarDatosResumen() {
+    const contenido = document.getElementById('contenidoResumen');
+    if (!contenido) return;
+    
+    contenido.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto"></div><p class="mt-4 text-gray-600">Calculando resumen...</p></div>';
+    
+    try {
+        const vista = document.getElementById('vistaResumen').value;
+        const filtro = document.getElementById('selectBarberoResumen')?.value || 'mi';
+        
+        let fechaInicio, fechaFin, fecha;
+        
+        // Obtener fechas según la vista actual
+        if (vista === 'mensual') {
+            fechaInicio = document.getElementById('fechaDesde')?.value;
+            fechaFin = document.getElementById('fechaHasta')?.value;
+            
+            if (!fechaInicio || !fechaFin) {
+                contenido.innerHTML = '<p class="text-gray-500">Por favor selecciona ambas fechas del rango</p>';
+                return;
+            }
+        } else {
+            // Para diaria y semanal
+            fecha = document.getElementById('fechaResumen')?.value;
+            
+            if (!fecha) {
+                contenido.innerHTML = '<p class="text-gray-500">Por favor selecciona una fecha</p>';
+                return;
+            }
+            
+            // Calcular rango según la vista
+            if (vista === 'diaria') {
+                fechaInicio = fecha;
+                fechaFin = fecha;
+            } else if (vista === 'semanal') {
+                const date = new Date(fecha + 'T00:00:00');
+                const dayOfWeek = date.getDay();
+                const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                
+                const lunes = new Date(date);
+                lunes.setDate(date.getDate() - diff);
+                
+                const domingo = new Date(lunes);
+                domingo.setDate(lunes.getDate() + 6);
+                
+                fechaInicio = lunes.toISOString().split('T')[0];
+                fechaFin = domingo.toISOString().split('T')[0];
+            }
+        }
+        
+        console.log(`🔍 Cargando datos: ${vista} | ${fechaInicio} al ${fechaFin}`);
+        
+        // Construir query base
+        let query = supabase
+            .from('citas')
+            .select('*')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .gte('fecha', fechaInicio)
+            .lte('fecha', fechaFin);
+        
+        // Aplicar filtro según rol y selección
+        if (userRole === 'empleado') {
+            query = query.eq('realizado_por_id', currentUser.id);
+        } else if (userRole === 'admin' && filtro !== 'todos') {
+            if (filtro === 'mi') {
+                query = query.eq('realizado_por_id', currentUser.id);
+            } else {
+                query = query.eq('realizado_por_id', filtro);
+            }
+        }
+        
+        const { data: servicios, error } = await query;
+        
+        if (error) throw error;
+        
+        // Calcular totales
+        const totalRecaudado = servicios ? servicios.reduce((sum, s) => sum + parseFloat(s.monto_total || 0), 0) : 0;
+        const totalServicios = servicios ? servicios.length : 0;
+        
+        // Agrupar por forma de pago
+        const porFormaPago = servicios ? servicios.reduce((acc, s) => {
+            acc[s.forma_pago] = (acc[s.forma_pago] || 0) + parseFloat(s.monto_total || 0);
+            return acc;
+        }, {}) : {};
+    // Obtener adelantos si es vista semanal o mensual
+let totalAdelantos = 0;
+if (vista !== 'diaria') {
+    console.log('🔍 Cargando adelantos para período...');
+    
+    // Construir query de adelantos con filtro por barbero
+    let queryAdelantos = supabase
+        .from('adelantos')
+        .select('barbero_id, monto')
+        .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+        .gte('created_at', fechaInicio + 'T00:00:00')
+        .lte('created_at', fechaFin + 'T23:59:59');
+    
+   // NUEVA LÓGICA: Siempre mostrar TODOS los adelantos del período (sin filtrar por activo)
+// Los adelantos son datos históricos que siempre deben aparecer para cálculos correctos
+console.log('📊 Mostrando todos los adelantos históricos del período');
+    
+    // Aplicar filtro según rol y selección (IGUAL que servicios)
+    if (userRole === 'empleado') {
+        // Empleado: solo SUS adelantos
+        queryAdelantos = queryAdelantos.eq('barbero_id', currentUser.id);
+    } else if (userRole === 'admin' && filtro !== 'todos') {
+        if (filtro === 'mi') {
+            // Admin "Mi resumen": solo SUS adelantos
+            queryAdelantos = queryAdelantos.eq('barbero_id', currentUser.id);
+        } else {
+            // Admin filtro específico: adelantos de ESE barbero
+            queryAdelantos = queryAdelantos.eq('barbero_id', filtro);
+        }
+    }
+    // Si es admin con "todos": no agregar filtro (ver adelantos de todos)
+    
+    const { data: adelantos, error: errorAdelantos } = await queryAdelantos;
+    
+    if (errorAdelantos) {
+        console.error('❌ Error cargando adelantos:', errorAdelantos);
+    } else if (adelantos) {
+        totalAdelantos = adelantos.reduce((sum, a) => sum + parseFloat(a.monto || 0), 0);
+        console.log('💰 Adelantos filtrados:', adelantos.length, 'Total:', totalAdelantos);
+    }
+}
+        
+        // Mostrar resumen
+        let html = `
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-bold mb-4">
+                    📅 Resumen ${vista === 'diaria' ? 'del Día' : vista === 'semanal' ? 'Semanal' : 'del Rango'}
+                </h3>
+                <p class="text-gray-600 mb-6">${fechaInicio === fechaFin ? fechaInicio : fechaInicio + ' al ' + fechaFin}</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="text-sm text-blue-600 mb-1">💰 Total Recaudado</div>
+                        <div class="text-2xl font-bold text-blue-900">$${totalRecaudado.toLocaleString('es-CL')}</div>
+                    </div>
+                    
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="text-sm text-green-600 mb-1">📊 Servicios Realizados</div>
+                        <div class="text-2xl font-bold text-green-900">${totalServicios}</div>
+                    </div>
+        `;
+        
+        if (vista !== 'diaria' && totalAdelantos > 0) {
+            html += `
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <div class="text-sm text-yellow-600 mb-1">💸 Adelantos</div>
+                        <div class="text-2xl font-bold text-yellow-900">$${totalAdelantos.toLocaleString('es-CL')}</div>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <div class="text-sm text-purple-600 mb-1">💰 Total Neto</div>
+                        <div class="text-2xl font-bold text-purple-900">$${(totalRecaudado - totalAdelantos).toLocaleString('es-CL')}</div>
+                    </div>
+            `;
+        }
+        
+        html += `
+                </div>
+                
+                <div class="border-t pt-4">
+                    <h4 class="font-semibold mb-3">💳 Desglose por Forma de Pago</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span>💵 Efectivo:</span>
+                            <span class="font-semibold">$${(porFormaPago['Efectivo'] || 0).toLocaleString('es-CL')}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>💳 Cuenta RUT:</span>
+                            <span class="font-semibold">$${(porFormaPago['Cuenta RUT'] || 0).toLocaleString('es-CL')}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>📱 Mercado Pago:</span>
+                            <span class="font-semibold">$${(porFormaPago['Mercado Pago'] || 0).toLocaleString('es-CL')}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        contenido.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        contenido.innerHTML = '<div class="bg-red-100 p-4 rounded-lg text-red-700">Error al cargar el resumen. Por favor intenta nuevamente.</div>';
+    }
+}
+        
+    function cambiarVistaResumen() {
+    var vista = document.getElementById('vistaResumen').value;
+    var fechaContainer = document.getElementById('contenedorFechas');
+    
+    if (!fechaContainer) {
+        console.error('No se encontró el contenedor de fechas');
+        return;
+    }
+    
+    console.log('Cambiando vista a: ' + vista);
+    
+    if (vista === 'diaria') {
+        fechaContainer.innerHTML = '<label id="labelFechaResumen" class="block text-sm font-medium text-gray-700 mb-2">Fecha:</label><input type="date" id="fechaResumen" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosResumen()">';
+        
+        setTimeout(function() {
+            var fechaInput = document.getElementById('fechaResumen');
+            if (fechaInput) {
+                fechaInput.value = getFechaChile();
+                cargarDatosResumen();
+            }
+        }, 100);
+    } else if (vista === 'semanal') {
+        fechaContainer.innerHTML = '<label id="labelFechaResumen" class="block text-sm font-medium text-gray-700 mb-2">Seleccionar cualquier día de la semana:</label><input type="date" id="fechaResumen" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosResumen()">';
+        
+        setTimeout(function() {
+            var fechaInput = document.getElementById('fechaResumen');
+            if (fechaInput) {
+                fechaInput.value = getFechaChile();  // ✅ CORRECTO
+                cargarDatosResumen();
+            }
+        }, 100);
+    } else if (vista === 'mensual') {
+        var html = '<label class="block text-sm font-medium text-gray-700 mb-2">Rango de fechas:</label>';
+        html += '<div class="grid grid-cols-2 gap-4">';
+        html += '<div><label class="text-xs text-gray-600">Desde:</label>';
+        html += '<input type="date" id="fechaDesde" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosResumen()"></div>';
+        html += '<div><label class="text-xs text-gray-600">Hasta:</label>';
+        html += '<input type="date" id="fechaHasta" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosResumen()"></div>';
+        html += '</div>';
+        
+        fechaContainer.innerHTML = html;
+        
+        setTimeout(function() {
+            var fechaDesde = document.getElementById('fechaDesde');
+            var fechaHasta = document.getElementById('fechaHasta');
+            if (fechaDesde && fechaHasta) {
+                var now = new Date();
+                var firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                fechaDesde.value = firstDay.toISOString().split('T')[0];
+                fechaHasta.value = lastDay.toISOString().split('T')[0];
+                cargarDatosResumen();
+            }
+        }, 100);
+    }
+}
+        
+  async function cargarBarberosEnFiltro() {
+    try {
+        console.log('🔍 Cargando barberos dinámicamente para filtro...');
+        
+        const { data: barberos, error } = await supabase
+            .from('usuarios')
+            .select('id, nombre')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .eq('activo', true);
+        
+        if (error) throw error;
+        
+        const select = document.getElementById('selectBarberoResumen');
+        if (!select) return;
+        
+        // Limpiar opciones actuales (mantener las 2 primeras)
+        while (select.children.length > 2) {
+            select.removeChild(select.lastChild);
+        }
+        
+        // Agregar todos los barberos dinámicamente
+        barberos.forEach(barbero => {
+            if (barbero.id !== currentUser.id) {  // No agregar al usuario actual
+                const option = document.createElement('option');
+                option.value = barbero.id;
+                option.textContent = barbero.nombre;
+                select.appendChild(option);
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error cargando barberos:', error);
+    }
+}
+        
+        // ===============================
+        // PESTAÑA: SERVICIOS
+        // ===============================
+      async function loadServicios() {
+    console.log('🔍 Cargando servicios...');
+    
+    document.getElementById('contentArea').innerHTML = `
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6">
+                <i class="fas fa-list mr-2"></i>Servicios
+            </h2>
+            
+          <!-- Filtros -->
+<div class="grid grid-cols-1 md:grid-cols-${userRole === 'admin' ? '3' : '1'} gap-4 mb-4">
+    <!-- Filtro de Fecha (para todos) -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Fecha:</label>
+        <select id="vistaServicios" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cambiarVistaServicios()">
+            <option value="hoy">Hoy</option>
+            <option value="semana">Esta Semana</option>
+            <option value="mes">Este Mes</option>
+            <option value="rango">Rango Personalizado</option>
+        </select>
+    </div>
+
+    ${userRole === 'admin' ? `
+    <!-- Filtro de Barbero (solo admin) -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Barbero:</label>
+        <select id="selectBarberoServicios" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarListaServicios()">
+            <option value="todos">Ver Todos</option>
+            <option value="mi">Mis Servicios</option>
+        </select>
+    </div>
+    <!-- Buscar por Código -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Buscar por Código:</label>
+        <input type="text" id="buscarCodigo" placeholder="Ej: 5, #5" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onkeyup="filtrarPorCodigo()">
+    </div>
+    ` : ''}
+</div>
+
+<!-- Contenedor de Fechas -->
+<div id="contenedorFechasServicios" class="mb-4" style="display:none;">
+    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha:</label>
+    <input type="date" id="fechaServicios" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarListaServicios()">
+</div>
+               
+            
+            <div id="serviciosLista" class="mt-6">
+                <div class="text-center py-8">
+                    <div class="loading-spinner mx-auto"></div>
+                    <p class="mt-4 text-gray-600">Cargando servicios...</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Cargar barberos para filtro si es admin
+    if (userRole === 'admin') {
+        cargarBarberosEnFiltroServicios();
+    }
+    
+    // Cargar servicios
+    cargarListaServicios();
+}
+
+async function cargarBarberosEnFiltroServicios() {
+   try {
+        console.log('🔍 Cargando barberos dinámicamente para filtro...');
+        
+        const { data: barberos, error } = await supabase
+            .from('usuarios')
+            .select('id, nombre')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .eq('activo', true);
+        
+        if (error) throw error;
+        
+        const select = document.getElementById('selectBarberoServicios'); // ✅ CORRECTO
+        if (!select) return;
+        
+        // Limpiar opciones actuales (mantener las 2 primeras)
+        while (select.children.length > 2) {
+            select.removeChild(select.lastChild);
+        }
+        
+        // Agregar todos los barberos dinámicamente
+        barberos.forEach(barbero => {
+            if (barbero.id !== currentUser.id) {  // No agregar al usuario actual
+                const option = document.createElement('option');
+                option.value = barbero.id;
+                option.textContent = barbero.nombre;
+                select.appendChild(option);
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error cargando barberos:', error);
+    }
+}
+
+let serviciosGlobales = []; // Para búsqueda por código
+
+async function cargarListaServicios() {
+    try {
+        console.log('🔍 Cargando lista de servicios...');
+        
+        // Obtener fechas según la vista seleccionada
+const vista = document.getElementById('vistaServicios')?.value || 'hoy';
+let fechaInicio, fechaFin;
+
+if (vista === 'hoy') {
+    const hoy = getFechaChile();
+    fechaInicio = hoy;
+    fechaFin = hoy;
+} else if (vista === 'semana') {
+    const fecha = document.getElementById('fechaServicios')?.value;
+    if (!fecha) return;
+    
+    const date = new Date(fecha + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    const lunes = new Date(date);
+    lunes.setDate(date.getDate() - diff);
+    const domingo = new Date(lunes);
+    domingo.setDate(lunes.getDate() + 6);
+    
+    fechaInicio = lunes.toISOString().split('T')[0];
+    fechaFin = domingo.toISOString().split('T')[0];
+} else if (vista === 'mes') {
+    const fecha = document.getElementById('fechaServicios')?.value;
+    if (!fecha) return;
+    
+    const date = new Date(fecha + 'T00:00:00');
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    
+    fechaInicio = firstDay.toISOString().split('T')[0];
+    fechaFin = lastDay.toISOString().split('T')[0];
+} else if (vista === 'rango') {
+    fechaInicio = document.getElementById('fechaDesdeServicios')?.value;
+    fechaFin = document.getElementById('fechaHastaServicios')?.value;
+    
+    if (!fechaInicio || !fechaFin) return;
+}
+
+console.log(`🔍 Cargando servicios: ${vista} | ${fechaInicio} al ${fechaFin}`);
+        let query = supabase
+            .from('citas')
+            .select('*')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .gte('fecha', fechaInicio)
+            .lte('fecha', fechaFin);
+
+        // Aplicar filtros según rol
+        if (userRole === 'empleado') {
+            query = query.eq('realizado_por_id', currentUser.id);
+        } else if (userRole === 'admin') {
+            const filtro = document.getElementById('selectBarberoServicios')?.value || 'todos';
+            if (filtro !== 'todos') {
+                if (filtro === 'mi') {
+                    query = query.eq('realizado_por_id', currentUser.id);
+                } else {
+                    query = query.eq('realizado_por_id', filtro);
+                }
+            }
+        }
+
+        const { data, error } = await query.order('codigo_diario', { ascending: false });
+
+        if (error) throw error;
+
+        serviciosGlobales = data || [];
+        mostrarListaServicios(serviciosGlobales);
+
+    } catch (error) {
+        console.error('❌ Error cargando servicios:', error);
+        document.getElementById('serviciosLista').innerHTML =
+            '<div class="text-red-600 text-center">❌ Error al cargar servicios</div>';
+    }
+}
+function cambiarVistaServicios() {
+    const vista = document.getElementById('vistaServicios').value;
+    const fechaContainer = document.getElementById('contenedorFechasServicios');
+    
+    if (!fechaContainer) return;
+    
+    console.log('🔄 Cambiando vista servicios a:', vista);
+    
+    if (vista === 'hoy') {
+        fechaContainer.style.display = 'none';
+    } else if (vista === 'semana') {
+        fechaContainer.style.display = 'block';
+        fechaContainer.innerHTML = '<label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar cualquier día de la semana:</label><input type="date" id="fechaServicios" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarListaServicios()">';
+        
+        setTimeout(() => {
+            const fechaInput = document.getElementById('fechaServicios');
+            if (fechaInput) {
+                fechaInput.value = getFechaChile();
+                cargarListaServicios();
+            }
+        }, 100);
+    } else if (vista === 'mes') {
+        fechaContainer.style.display = 'block';
+        fechaContainer.innerHTML = '<label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar cualquier día del mes:</label><input type="date" id="fechaServicios" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarListaServicios()">';
+        
+        setTimeout(() => {
+            const fechaInput = document.getElementById('fechaServicios');
+            if (fechaInput) {
+                fechaInput.value = getFechaChile();  // ✅ CORRECTO
+                cargarListaServicios();
+            }
+        }, 100);
+    } else if (vista === 'rango') {
+        fechaContainer.style.display = 'block';
+        const html = '<label class="block text-sm font-medium text-gray-700 mb-2">Rango de fechas:</label>' +
+                    '<div class="grid grid-cols-2 gap-4">' +
+                    '<div><label class="text-xs text-gray-600">Desde:</label>' +
+                    '<input type="date" id="fechaDesdeServicios" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarListaServicios()"></div>' +
+                    '<div><label class="text-xs text-gray-600">Hasta:</label>' +
+                    '<input type="date" id="fechaHastaServicios" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarListaServicios()"></div>' +
+                    '</div>';
+        
+        fechaContainer.innerHTML = html;
+        
+        setTimeout(() => {
+            const fechaDesde = document.getElementById('fechaDesdeServicios');
+            const fechaHasta = document.getElementById('fechaHastaServicios');
+            if (fechaDesde && fechaHasta) {
+                const now = new Date();
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                fechaDesde.value = firstDay.toISOString().split('T')[0];
+                fechaHasta.value = lastDay.toISOString().split('T')[0];
+                cargarListaServicios();
+            }
+        }, 100);
+    }
+}
+
+function mostrarListaServicios(servicios) {
+    const container = document.getElementById('serviciosLista');
+    
+    if (!servicios || servicios.length === 0) {
+        container.innerHTML = '<div class="text-gray-500 text-center py-8">No hay servicios registrados hoy</div>';
+        return;
+    }
+
+    const esAdmin = userRole === 'admin';
+    let html = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Barbero</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Servicio</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago</th>
+                        ${esAdmin ? '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+    `;
+
+    servicios.forEach(servicio => {
+        html += `
+            <tr>
+                <td class="px-4 py-3 text-sm font-mono">#${servicio.codigo_diario || servicio.id}</td>
+                <td class="px-4 py-3 text-sm">${servicio.realizado_por_nombre}</td>
+                <td class="px-4 py-3 text-sm">${servicio.servicio_principal_nombre}</td>
+                <td class="px-4 py-3 text-sm font-semibold text-green-600">$${servicio.monto_total.toLocaleString('es-CL')}</td>
+                <td class="px-4 py-3 text-sm">${servicio.forma_pago}</td>
+                ${esAdmin ? `<td class="px-4 py-3 text-sm">
+                    <button class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600" onclick="confirmarEliminarServicio(${servicio.id}, '${servicio.codigo_diario || servicio.id}')">
+                        🗑️ Eliminar
+                    </button>
+                </td>` : ''}
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 text-sm text-gray-600">
+            Total mostrado: ${servicios.length} servicios
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+function filtrarPorCodigo() {
+    const codigo = document.getElementById('buscarCodigo').value.replace('#', '').trim();
+   
+    if (!codigo) {
+        mostrarListaServicios(serviciosGlobales);
+        return;
+    }
+    
+    const serviciosFiltrados = serviciosGlobales.filter(servicio => {
+        const codigoServicio = (servicio.codigo_diario || servicio.id).toString();
+        return codigoServicio.includes(codigo);
+    });
+    
+    mostrarListaServicios(serviciosFiltrados);
+}
+
+async function confirmarEliminarServicio(servicioId, codigo) {
+    if (!confirm(`¿Eliminar servicio #${codigo}? Esta acción NO se puede deshacer y afectará los cálculos.`)) {
+        return;
+    }
+    
+    try {
+        console.log(`🗑️ Eliminando servicio ID: ${servicioId}`);
+        
+        const { error } = await supabase
+            .from('citas')
+            .delete()
+            .eq('id', servicioId)
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID);
+        
+        if (error) {
+            console.error('❌ Error eliminando servicio:', error);
+            alert(`❌ Error al eliminar: ${error.message}`);
+        } else {
+            alert(`✅ Servicio #${codigo} eliminado correctamente`);
+            // Recargar lista
+            cargarListaServicios();
+        }
+        
+    } catch (error) {
+        console.error('❌ Error crítico:', error);
+        alert('❌ Error del sistema al eliminar servicio');
+    }
+}
+        // ===============================
+// MODAL AGREGAR BARBERO
+// ===============================
+function mostrarModalAgregarBarbero() {
+    // Crear modal
+    const modalHTML = `
+        <div id="modalAgregarBarbero" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">➕ Nuevo Barbero</h3>
+                    <button onclick="cerrarModalAgregarBarbero()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="formAgregarBarbero">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nombre Completo *</label>
+                            <input type="text" id="nombreBarbero" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ej: Juan Pérez" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                            <input type="email" id="emailBarbero" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="juan@email.com" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rol *</label>
+                            <select id="rolBarbero" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Seleccionar rol...</option>
+                                <option value="empleado">Empleado</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3 mt-6">
+                        <button type="button" onclick="cerrarModalAgregarBarbero()" class="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                            ➕ Agregar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    // Insertar modal en el DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Agregar evento al formulario
+    document.getElementById('formAgregarBarbero').addEventListener('submit', procesarAgregarBarbero);
+}
+
+function cerrarModalAgregarBarbero() {
+    const modal = document.getElementById('modalAgregarBarbero');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function procesarAgregarBarbero(e) {
+    e.preventDefault();
+    
+    const nombre = document.getElementById('nombreBarbero').value.trim();
+    const email = document.getElementById('emailBarbero').value.trim();
+    const rol = document.getElementById('rolBarbero').value;
+    
+    // Validaciones
+    if (!nombre || !email || !rol) {
+        alert('❌ Por favor completa todos los campos obligatorios');
+        return;
+    }
+    
+    if (!email.includes('@')) {
+        alert('❌ Por favor ingresa un email válido');
+        return;
+    }
+    
+    try {
+        showLoading();
+        console.log('👤 Creando barbero:', { nombre, email, rol });
+        
+        // Crear usuario en Supabase
+const nuevoUsuario = {
+    email: email,
+    nombre: nombre,
+    role: rol,
+    barberia_id: window.CURRENT_BARBERIA_ID,
+    activo: true
+};
+
+console.log('💾 Guardando en Supabase:', nuevoUsuario);
+
+const { data, error } = await supabase
+    .from('usuarios')
+    .insert([nuevoUsuario])
+    .select();
+
+if (error) {
+    console.error('❌ Error de Supabase:', error);
+    alert(`❌ Error al crear barbero: ${error.message}`);
+} else {
+    console.log('✅ Usuario creado:', data);
+    alert(`✅ Barbero "${nombre}" creado exitosamente!\n\nYa puede iniciar sesión con:\n📧 ${email}\n🔑 Contraseña temporal: 123456`);
+    
+    // Cerrar modal
+    cerrarModalAgregarBarbero();
+    
+    // Recargar lista de barberos
+    cargarListaBarberos();
+}
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('❌ Error al crear barbero: ' + error.message);
+    } finally {
+        hideLoading();
+    }
+}
+        // ===============================
+// MODAL EDITAR BARBERO
+// ===============================
+function mostrarModalEditarBarbero(id, nombre, email, rol) {
+    const modalHTML = `
+        <div id="modalEditarBarbero" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">✏️ Editar Barbero</h3>
+                    <button onclick="cerrarModalEditarBarbero()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="formEditarBarbero">
+                    <input type="hidden" id="editarBarberoId" value="${id}">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nombre Completo *</label>
+                            <input type="text" id="editarNombreBarbero" value="${nombre}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                            <input type="email" id="editarEmailBarbero" value="${email}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rol *</label>
+                            <select id="editarRolBarbero" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                                <option value="empleado" ${rol === 'empleado' ? 'selected' : ''}>Empleado</option>
+                                <option value="admin" ${rol === 'admin' ? 'selected' : ''}>Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3 mt-6">
+                        <button type="button" onclick="cerrarModalEditarBarbero()" class="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                            💾 Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.getElementById('formEditarBarbero').addEventListener('submit', procesarEditarBarbero);
+}
+
+function cerrarModalEditarBarbero() {
+    const modal = document.getElementById('modalEditarBarbero');
+    if (modal) modal.remove();
+}
+
+async function procesarEditarBarbero(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('editarBarberoId').value;
+    const nombre = document.getElementById('editarNombreBarbero').value.trim();
+    const email = document.getElementById('editarEmailBarbero').value.trim();
+    const rol = document.getElementById('editarRolBarbero').value;
+    
+    if (!nombre || !email || !rol) {
+        alert('Por favor completa todos los campos');
+        return;
+    }
+    
+    try {
+        showLoading();
+        
+        const { data, error } = await supabase
+    .from('usuarios')
+    .update({ nombre, email, role: rol })
+    .eq('id', id)
+    .select();
+
+console.log('🔄 Resultado update:', data, error);
+        
+        if (error) {
+            alert(`Error al actualizar: ${error.message}`);
+        } else {
+            alert(`✅ Barbero "${nombre}" actualizado correctamente`);
+            cerrarModalEditarBarbero();
+            cargarListaBarberos();
+        }
+        
+    } catch (error) {
+        alert('Error del sistema: ' + error.message);
+    } finally {
+        hideLoading();
+    }
+}
+        // ===============================
+        // PESTAÑAS PENDIENTES
+        // ===============================
+        function loadGestionBarberos() {
+    console.log('🔍 Cargando gestión de barberos...');
+    
+    // Verificar que sea admin
+    if (userRole !== 'admin') {
+        document.getElementById('contentArea').innerHTML = '<div class="text-red-600">❌ Sin permisos de administrador</div>';
+        return;
+    }
+    
+    document.getElementById('contentArea').innerHTML = `
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6">
+                <i class="fas fa-users mr-2"></i>Gestión de Barberos
+            </h2>
+            <p class="text-gray-600 mb-6">Administra el personal y adelantos de la barbería</p>
+            
+            <div class="barberos-container mb-8">
+                <div class="text-center py-8">
+                    <div class="loading-spinner mx-auto"></div>
+                    <p class="mt-4 text-gray-600">⏳ Cargando barberos...</p>
+                </div>
+            </div>
+            
+            <div class="adelantos-resumen bg-gray-50 p-6 rounded-lg">
+                <h3 class="text-lg font-bold mb-4">🔵 Resumen de Adelantos Semanal</h3>
+                <div class="adelantos-loading">
+                    <div class="loading-spinner mx-auto"></div>
+                    <p class="mt-2 text-gray-600">⏳ Cargando adelantos...</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Cargar barberos y adelantos
+    cargarListaBarberos();
+    cargarResumenAdelantos();
+}
+
+async function cargarListaBarberos() {
+    try {
+        console.log('🔍 Cargando lista de barberos...');
+        
+       // Intentar cargar desde Supabase, si falla usar datos demo
+try {
+    console.log('🔍 Intentando cargar barberos desde Supabase...');
+    
+    const { data: barberos, error } = await supabase
+        .from('usuarios')
+        .select('id, nombre, email, role')
+        .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+        .eq('activo', true);
+    
+    if (error) {
+        console.log('⚠️ Error RLS, usando datos demo:', error.message);
+        // Fallback a datos demo
+        const barberosDemo = [
+            { id: '3fbc31cc-da0a-4f4a-b45b-e7a51320c92c', nombre: 'Administrador', email: 'israelparancan.n@gmail.com', role: 'admin' },
+            { id: '1a0242b8-bc7a-4e61-9e33-ac182996a950', nombre: 'Misho', email: 'ispn4trade@gmail.com', role: 'empleado' }
+        ];
+        mostrarListaBarberos(barberosDemo);
+    } else {
+    console.log('✅ Barberos cargados desde Supabase:', barberos);
+    console.log('📊 Cantidad de barberos:', barberos ? barberos.length : 0);
+    
+    // Si no hay barberos en Supabase, usar demo
+    if (!barberos || barberos.length === 0) {
+        console.log('🔄 No hay barberos en Supabase, usando demo');
+        const barberosDemo = [
+            { id: '3fbc31cc-da0a-4f4a-b45b-e7a51320c92c', nombre: 'Administrador', email: 'israelparancan.n@gmail.com', role: 'admin' },
+            { id: '1a0242b8-bc7a-4e61-9e33-ac182996a950', nombre: 'Misho', email: 'ispn4trade@gmail.com', role: 'empleado' }
+        ];
+        mostrarListaBarberos(barberosDemo);
+    } else {
+        mostrarListaBarberos(barberos);
+    }
+}
+} catch (error) {
+    console.error('❌ Error crítico:', error);
+    // Fallback final
+    const barberosDemo = [
+        { id: '3fbc31cc-da0a-4f4a-b45b-e7a51320c92c', nombre: 'Administrador', email: 'israelparancan.n@gmail.com', role: 'admin' },
+        { id: '1a0242b8-bc7a-4e61-9e33-ac182996a950', nombre: 'Misho', email: 'ispn4trade@gmail.com', role: 'empleado' }
+    ];
+    mostrarListaBarberos(barberosDemo);
+}
+        
+    } catch (error) {
+        console.error('❌ Error en cargarListaBarberos:', error);
+        document.querySelector('.barberos-container').innerHTML = 
+            '<div class="text-red-600 text-center">❌ Error cargando barberos</div>';
+    }
+}
+
+function mostrarListaBarberos(barberos) {
+    const container = document.querySelector('.barberos-container');
+    
+    if (!barberos || barberos.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8">
+                <div class="text-gray-500 mb-4">👤 No hay barberos registrados</div>
+                <button class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700" onclick="alert('Funcionalidad próximamente')">
+                    ➕ Agregar Primer Barbero
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="space-y-4">';
+    
+    barberos.forEach(barbero => {
+        const roleBadge = barbero.role === 'admin' ? 
+            '<span class="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">👑 Administrador</span>' : 
+            '<span class="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">💼 Empleado</span>';
+        
+        html += `
+            <div class="bg-white p-6 rounded-lg shadow border">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="text-lg font-semibold text-gray-900 mb-2">${barbero.nombre}</div>
+                        <div class="text-gray-600 mb-2">${barbero.email}</div>
+                        <div class="mb-3">${roleBadge}</div>
+                    </div>
+                    <div class="flex space-x-2">
+                       <button class="bg-gray-100 text-gray-600 px-3 py-2 rounded hover:bg-gray-200" onclick="mostrarModalEditarBarbero('${barbero.id}', '${barbero.nombre}', '${barbero.email}', '${barbero.role}')">
+                    ✏️
+                  </button>
+                        <button class="bg-red-100 text-red-600 px-3 py-2 rounded hover:bg-red-200" onclick="confirmarEliminarBarbero('${barbero.id}', '${barbero.nombre}')">
+                            🗑️
+                        </button>
+                        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" onclick="mostrarFormularioAdelanto('${barbero.id}', '${barbero.nombre}')">
+                            💰 + Adelanto
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+        </div>
+        <div class="mt-6 text-center">
+            <button class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700" onclick="mostrarModalAgregarBarbero()">
+    ➕ Agregar Barbero
+</button>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+async function confirmarEliminarBarbero(barberoId, nombre) {
+    if (!confirm(`¿Desactivar barbero "${nombre}"?\n\n⚠️ El barbero ya no podrá:\n• Iniciar sesión\n• Registrar servicios\n• Recibir adelantos\n\n✅ Sus datos históricos se mantendrán.`)) {
+        return;
+    }
+    
+    try {
+        showLoading();
+        console.log(`🗑️ Desactivando barbero: ${nombre} (${barberoId})`);
+        
+        const { data, error } = await supabase
+            .from('usuarios')
+            .update({ activo: false })
+            .eq('id', barberoId)
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .select();
+        
+        if (error) {
+            console.error('❌ Error:', error);
+            alert(`❌ Error al desactivar: ${error.message}`);
+        } else {
+            alert(`✅ Barbero "${nombre}" desactivado correctamente.\n\nYa no podrá acceder al sistema.`);
+            cargarListaBarberos(); // Recargar lista
+        }
+        
+    } catch (error) {
+        console.error('❌ Error crítico:', error);
+        alert('❌ Error del sistema');
+    } finally {
+        hideLoading();
+    }
+}
+function mostrarFormularioAdelanto(barberoId, nombre) {
+    const monto = prompt(`💰 Ingresa el monto del adelanto para ${nombre}:`);
+    if (monto && !isNaN(monto) && parseFloat(monto) > 0) {
+        const motivo = prompt(`Motivo del adelanto (opcional):`);
+        registrarAdelanto(barberoId, nombre, parseFloat(monto), motivo || 'Adelanto');
+    } else if (monto !== null) {
+        alert('❌ Por favor ingresa un monto válido');
+    }
+}
+
+async function registrarAdelanto(barberoId, barberoNombre, monto, motivo) {
+    try {
+        showLoading();
+        console.log(`💰 Registrando adelanto: ${barberoNombre} - $${monto}`);
+        
+       // Calcular semana y año actual
+const hoy = new Date();
+const inicioAño = new Date(hoy.getFullYear(), 0, 1);
+const diasTranscurridos = Math.floor((hoy - inicioAño) / (24 * 60 * 60 * 1000));
+const numeroSemana = Math.ceil((diasTranscurridos + inicioAño.getDay() + 1) / 7);
+
+const nuevoAdelanto = {
+    barberia_id: window.CURRENT_BARBERIA_ID,
+    barbero_id: barberoId,
+    barbero_nombre: barberoNombre,
+    monto: monto,
+    motivo: motivo,
+    semana: numeroSemana,
+    año: hoy.getFullYear(),
+    activo: true
+};
+        
+        const { data, error } = await supabase
+            .from('adelantos')
+            .insert([nuevoAdelanto]);
+        
+        if (error) {
+            console.error('❌ Error guardando adelanto:', error);
+            alert(`❌ Error al registrar adelanto: ${error.message}`);
+        } else {
+            alert(`✅ Adelanto registrado: $${monto.toLocaleString('es-CL')} para ${barberoNombre}`);
+            // Recargar resumen de adelantos
+            cargarResumenAdelantos();
+        }
+        
+    } catch (error) {
+        console.error('❌ Error crítico:', error);
+        alert('❌ Error del sistema al registrar adelanto');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function cargarResumenAdelantos() {
+    try {
+        console.log('🔍 Cargando resumen de adelantos...');
+        
+        // Calcular fechas de la semana actual (lunes a domingo)
+        const hoy = new Date();
+        const diaSemana = hoy.getDay();
+        const diasDesdeInicio = diaSemana === 0 ? 6 : diaSemana - 1;
+        
+        const inicioSemana = new Date(hoy);
+        inicioSemana.setDate(hoy.getDate() - diasDesdeInicio);
+        inicioSemana.setHours(0, 0, 0, 0);
+        
+        const finSemana = new Date(inicioSemana);
+        finSemana.setDate(inicioSemana.getDate() + 6);
+        finSemana.setHours(23, 59, 59, 999);
+        
+        console.log('📅 Semana actual:', inicioSemana.toISOString().split('T')[0], 'al', finSemana.toISOString().split('T')[0]);
+        
+        const { data: adelantos, error } = await supabase
+            .from('adelantos')
+            .select('barbero_nombre, monto')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .eq('activo', true)
+            .gte('created_at', inicioSemana.toISOString())
+            .lte('created_at', finSemana.toISOString());
+        
+        if (error) {
+            console.error('❌ Error cargando adelantos:', error);
+           const loadingElement = document.querySelector('.adelantos-loading');
+if (loadingElement) {
+    loadingElement.innerHTML = '<div class="text-red-600">❌ Error del sistema</div>';
+}
+            return;
+        }
+        
+        console.log('✅ Adelantos de la semana:', adelantos);
+        mostrarResumenAdelantos(adelantos || []);
+        
+    } catch (error) {
+        console.error('❌ Error crítico en adelantos:', error);
+        document.querySelector('.adelantos-loading').innerHTML = 
+            '<div class="text-red-600">❌ Error del sistema</div>';
+    }
+}
+
+function mostrarResumenAdelantos(adelantos) {
+    // Buscar contenedor principal de adelantos
+    let container = document.querySelector('.adelantos-resumen');
+    
+    // Si no existe, buscar por clase alternativa
+    if (!container) {
+        const loadingElement = document.querySelector('.adelantos-loading');
+        if (loadingElement && loadingElement.parentElement) {
+            container = loadingElement.parentElement;
+        }
+    }
+    
+    // Si aún no existe, salir silenciosamente
+    if (!container) {
+        console.log('🔄 Contenedor de adelantos no disponible, omitiendo actualización');
+        return;
+    }
+    
+    if (!adelantos || adelantos.length === 0) {
+        container.innerHTML = `
+            <h3 class="text-lg font-bold mb-4">🔵 Resumen de Adelantos Semanal</h3>
+            <div class="text-center py-6">
+                <div class="text-gray-500 mb-4">💰 No hay adelantos esta semana</div>
+                <div class="flex justify-center">
+            <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700" onclick="mostrarModalHistorialAdelantos()">
+          📋 Historial Completo
+            </button>
+</div>
+            </div>
+        `;
+        return;
+    }
+    
+    // Agrupar adelantos por barbero
+    const adelantosPorBarbero = {};
+    let totalGeneral = 0;
+    
+    adelantos.forEach(adelanto => {
+        const barbero = adelanto.barbero_nombre;
+        if (!adelantosPorBarbero[barbero]) {
+            adelantosPorBarbero[barbero] = 0;
+        }
+        adelantosPorBarbero[barbero] += parseFloat(adelanto.monto || 0);
+        totalGeneral += parseFloat(adelanto.monto || 0);
+    });
+    
+    let html = '<h3 class="text-lg font-bold mb-4">🔵 Resumen de Adelantos Semanal</h3>';
+    html += '<div class="bg-white p-4 rounded border mb-4">';
+    
+    Object.keys(adelantosPorBarbero).forEach(barbero => {
+        const monto = adelantosPorBarbero[barbero];
+        html += `
+            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                <span class="font-medium">${barbero}:</span>
+                <span class="text-lg font-bold text-green-600">$${monto.toLocaleString('es-CL')}</span>
+            </div>
+        `;
+    });
+    
+    html += `
+        <div class="flex justify-between items-center py-3 pt-4 border-t border-gray-300">
+            <span class="text-lg font-bold">Total:</span>
+            <span class="text-xl font-bold text-blue-600">$${totalGeneral.toLocaleString('es-CL')}</span>
+        </div>
+    `;
+    
+  html += `
+    </div>
+    <div class="flex justify-center space-x-4">
+        <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700" onclick="mostrarModalHistorialAdelantos()">
+    📋 Historial Completo
+</button>
+    </div>
+`;
+    
+    container.innerHTML = html;
+}
+function mostrarModalHistorialAdelantos() {
+    const modalHTML = `
+        <div id="modalHistorialAdelantos" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">📋 Historial Completo de Adelantos</h3>
+                    <button onclick="cerrarModalHistorialAdelantos()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- Filtros -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Barbero:</label>
+                        <select id="filtroBarberoHistorial" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarHistorialAdelantos()">
+                            <option value="todos">Todos los barberos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Desde:</label>
+                        <input type="date" id="fechaDesdeHistorial" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarHistorialAdelantos()">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Hasta:</label>
+                        <input type="date" id="fechaHastaHistorial" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarHistorialAdelantos()">
+                    </div>
+                </div>
+                
+                <!-- Contenido del historial -->
+                <div id="contenidoHistorialAdelantos">
+                    <div class="text-center py-8">
+                        <div class="loading-spinner mx-auto"></div>
+                        <p class="mt-4 text-gray-600">Cargando historial...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Configurar fechas por defecto (último mes)
+    const hoy = new Date();
+    const haceUnMes = new Date();
+    haceUnMes.setMonth(hoy.getMonth() - 1);
+    
+    document.getElementById('fechaDesdeHistorial').value = haceUnMes.toISOString().split('T')[0];
+    document.getElementById('fechaHastaHistorial').value = hoy.toISOString().split('T')[0];
+    
+    // Cargar barberos en filtro
+    cargarBarberosEnHistorial();
+    
+    // Cargar historial inicial
+    cargarHistorialAdelantos();
+}
+
+function cerrarModalHistorialAdelantos() {
+    const modal = document.getElementById('modalHistorialAdelantos');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function cargarBarberosEnHistorial() {
+    try {
+        const { data: barberos, error } = await supabase
+            .from('usuarios')
+            .select('id, nombre')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID);
+        
+        if (error) throw error;
+        
+        const select = document.getElementById('filtroBarberoHistorial');
+        if (!select) return;
+        
+        // Agregar barberos al filtro (incluyendo inactivos para historial)
+        barberos.forEach(barbero => {
+            const option = document.createElement('option');
+            option.value = barbero.id;
+            option.textContent = barbero.nombre;
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('❌ Error cargando barberos:', error);
+    }
+}
+
+async function cargarHistorialAdelantos() {
+    const contenido = document.getElementById('contenidoHistorialAdelantos');
+    if (!contenido) return;
+    
+    contenido.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto"></div><p class="mt-4 text-gray-600">Cargando historial...</p></div>';
+    
+    try {
+        const fechaDesde = document.getElementById('fechaDesdeHistorial').value;
+        const fechaHasta = document.getElementById('fechaHastaHistorial').value;
+        const barberoFiltro = document.getElementById('filtroBarberoHistorial').value;
+        
+        if (!fechaDesde || !fechaHasta) {
+            contenido.innerHTML = '<p class="text-gray-500">Por favor selecciona ambas fechas</p>';
+            return;
+        }
+        
+        // Construir query
+        let query = supabase
+            .from('adelantos')
+            .select('*')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .gte('created_at', fechaDesde + 'T00:00:00')
+            .lte('created_at', fechaHasta + 'T23:59:59')
+            .order('created_at', { ascending: false });
+        
+        // Aplicar filtro por barbero si no es "todos"
+        if (barberoFiltro !== 'todos') {
+            query = query.eq('barbero_id', barberoFiltro);
+        }
+        
+        const { data: adelantos, error } = await query;
+        
+        if (error) throw error;
+        
+        mostrarTablaHistorial(adelantos || []);
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        contenido.innerHTML = '<div class="text-red-600 text-center">❌ Error al cargar historial</div>';
+    }
+}
+
+function mostrarTablaHistorial(adelantos) {
+    const contenido = document.getElementById('contenidoHistorialAdelantos');
+    
+    if (!adelantos || adelantos.length === 0) {
+        contenido.innerHTML = '<div class="text-center py-8 text-gray-500">📋 No hay adelantos en el período seleccionado</div>';
+        return;
+    }
+    
+    const total = adelantos.reduce((sum, a) => sum + parseFloat(a.monto || 0), 0);
+    
+    let html = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Barbero</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motivo</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+    `;
+    
+    adelantos.forEach(adelanto => {
+        const fecha = new Date(adelanto.created_at).toLocaleDateString('es-CL');
+        html += `
+            <tr>
+                <td class="px-4 py-3 text-sm">${fecha}</td>
+                <td class="px-4 py-3 text-sm">${adelanto.barbero_nombre}</td>
+                <td class="px-4 py-3 text-sm font-semibold text-green-600">$${parseFloat(adelanto.monto).toLocaleString('es-CL')}</td>
+                <td class="px-4 py-3 text-sm">${adelanto.motivo}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div class="flex justify-between items-center">
+                <span class="font-semibold">Total del período:</span>
+                <span class="text-xl font-bold text-blue-600">$${total.toLocaleString('es-CL')}</span>
+            </div>
+            <div class="text-sm text-gray-600 mt-1">
+                ${adelantos.length} adelanto${adelantos.length !== 1 ? 's' : ''} encontrado${adelantos.length !== 1 ? 's' : ''}
+            </div>
+        </div>
+    `;
+    
+    contenido.innerHTML = html;
+}
+    // ===============================
+        // PESTAÑA: CIERRE DE CAJA
+        // ===============================
+        function loadCierreCaja() {
+            console.log('🔍 Cargando cierre de caja...');
+            
+            // Verificar que sea admin
+            if (userRole !== 'admin') {
+                document.getElementById('contentArea').innerHTML = '<div class="text-red-600">❌ Sin permisos de administrador</div>';
+                return;
+            }
+            
+            document.getElementById('contentArea').innerHTML = `
+                <div class="max-w-5xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6">
+                        <i class="fas fa-cash-register mr-2"></i>Cierre de Caja
+                    </h2>
+                    
+                    <!-- Selector de Vista -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Cierre:</label>
+                            <select id="vistaCierre" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cambiarVistaCierre()">
+                                <option value="diaria">📅 Cierre Diario</option>
+                                <option value="semanal">📊 Cierre Semanal</option>
+                                <option value="rango">🗓️ Rango Personalizado</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Barbero:</label>
+                            <select id="selectBarberoCierre" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosCierre()">
+                                <option value="todos">Ver Todos</option>
+                                <option value="mi">Mi Resumen</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Contenedor de Fechas -->
+                    <div id="contenedorFechasCierre" class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha:</label>
+                        <input type="date" id="fechaCierre" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosCierre()">
+                    </div>
+                    
+                    <!-- Contenedor del Cierre -->
+                    <div id="contenidoCierre" class="mt-6">
+                        <div class="text-center py-8">
+                            <div class="loading-spinner mx-auto"></div>
+                            <p class="mt-4 text-gray-600">Calculando cierre...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Configurar fecha inicial
+            setTimeout(() => {
+                const fechaInput = document.getElementById('fechaCierre');
+                if (fechaInput) {
+                   fechaInput.value = getFechaChile();
+                }
+                cargarBarberosEnFiltroCierre();
+                cargarDatosCierre();
+            }, 100);
+        }
+        
+        async function cargarBarberosEnFiltroCierre() {
+            try {
+        console.log('🔍 Cargando barberos dinámicamente para filtro...');
+        
+        const { data: barberos, error } = await supabase
+            .from('usuarios')
+            .select('id, nombre')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .eq('activo', true);
+        
+        if (error) throw error;
+        
+        const select = document.getElementById('selectBarberoCierre'); // ✅ CORRECTO
+        if (!select) return;
+        
+        // Limpiar opciones actuales (mantener las 2 primeras)
+        while (select.children.length > 2) {
+            select.removeChild(select.lastChild);
+        }
+        
+        // Agregar todos los barberos dinámicamente
+        barberos.forEach(barbero => {
+            if (barbero.id !== currentUser.id) {  // No agregar al usuario actual
+                const option = document.createElement('option');
+                option.value = barbero.id;
+                option.textContent = barbero.nombre;
+                select.appendChild(option);
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error cargando barberos:', error);
+    }
+}
+        
+        function cambiarVistaCierre() {
+            const vista = document.getElementById('vistaCierre').value;
+            const fechaContainer = document.getElementById('contenedorFechasCierre');
+            
+            if (!fechaContainer) return;
+            
+            console.log('🔄 Cambiando vista de cierre a:', vista);
+            
+            if (vista === 'diaria') {
+                fechaContainer.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha del Cierre:</label>
+                    <input type="date" id="fechaCierre" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosCierre()">
+                `;
+            } else if (vista === 'semanal') {
+                fechaContainer.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar cualquier día de la semana:</label>
+                    <input type="date" id="fechaCierre" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosCierre()">
+                `;
+            } else if (vista === 'rango') {
+                fechaContainer.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Rango de fechas:</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-600">Desde:</label>
+                            <input type="date" id="fechaDesde" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosCierre()">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-600">Hasta:</label>
+                            <input type="date" id="fechaHasta" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarDatosCierre()">
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Configurar fechas iniciales después del cambio
+            setTimeout(() => {
+                if (vista === 'diaria' || vista === 'semanal') {
+                    const fechaInput = document.getElementById('fechaCierre');
+                    if (fechaInput) {
+                        fechaInput.value = getFechaChile();
+                    }
+                } else if (vista === 'rango') {
+                    const now = new Date();
+                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    
+                    const fechaDesde = document.getElementById('fechaDesde');
+                    const fechaHasta = document.getElementById('fechaHasta');
+                    
+                    if (fechaDesde && fechaHasta) {
+                        fechaDesde.value = firstDay.toISOString().split('T')[0];
+                        fechaHasta.value = lastDay.toISOString().split('T')[0];
+                    }
+                }
+                cargarDatosCierre();
+            }, 100);
+        }
+        
+        async function cargarDatosCierre() {
+            const contenido = document.getElementById('contenidoCierre');
+            if (!contenido) return;
+            
+            contenido.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto"></div><p class="mt-4 text-gray-600">💰 Calculando cierre...</p></div>';
+            
+            try {
+                const vista = document.getElementById('vistaCierre').value;
+                const filtro = document.getElementById('selectBarberoCierre')?.value || 'todos';
+                
+                let fechaInicio, fechaFin, fecha;
+                
+                // Obtener fechas según la vista
+                if (vista === 'rango') {
+                    fechaInicio = document.getElementById('fechaDesde')?.value;
+                    fechaFin = document.getElementById('fechaHasta')?.value;
+                    
+                    if (!fechaInicio || !fechaFin) {
+                        contenido.innerHTML = '<p class="text-gray-500">Por favor selecciona ambas fechas del rango</p>';
+                        return;
+                    }
+                } else {
+                    fecha = document.getElementById('fechaCierre')?.value;
+                    
+                    if (!fecha) {
+                        contenido.innerHTML = '<p class="text-gray-500">Por favor selecciona una fecha</p>';
+                        return;
+                    }
+                    
+                    if (vista === 'diaria') {
+                        fechaInicio = fecha;
+                        fechaFin = fecha;
+                    } else if (vista === 'semanal') {
+                        // Calcular semana completa (lunes a domingo)
+                        const date = new Date(fecha + 'T00:00:00');
+                        const dayOfWeek = date.getDay();
+                        const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                        
+                        const lunes = new Date(date);
+                        lunes.setDate(date.getDate() - diff);
+                        
+                        const domingo = new Date(lunes);
+                        domingo.setDate(lunes.getDate() + 6);
+                        
+                        fechaInicio = lunes.toISOString().split('T')[0];
+                        fechaFin = domingo.toISOString().split('T')[0];
+                    }
+                }
+                
+                console.log(`💰 Cargando cierre: ${vista} | ${fechaInicio} al ${fechaFin}`);
+                
+                // Cargar servicios
+                let queryServicios = supabase
+                    .from('citas')
+                    .select('*')
+                    .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+                    .gte('fecha', fechaInicio)
+                    .lte('fecha', fechaFin);
+                
+                // Aplicar filtro por barbero
+                if (filtro !== 'todos') {
+                    if (filtro === 'mi') {
+                        queryServicios = queryServicios.eq('realizado_por_id', currentUser.id);
+                    } else {
+                        queryServicios = queryServicios.eq('realizado_por_id', filtro);
+                    }
+                }
+                
+                const { data: servicios, error } = await queryServicios;
+                if (error) throw error;
+                
+                // Calcular totales de servicios
+                const totalRecaudado = servicios ? servicios.reduce((sum, s) => sum + parseFloat(s.monto_total || 0), 0) : 0;
+                const totalServicios = servicios ? servicios.length : 0;
+                
+                // Agrupar por forma de pago
+                const porFormaPago = servicios ? servicios.reduce((acc, s) => {
+                    acc[s.forma_pago] = (acc[s.forma_pago] || 0) + parseFloat(s.monto_total || 0);
+                    return acc;
+                }, {}) : {};
+                
+                // Cargar adelantos SOLO para vista semanal y rango
+let totalAdelantos = 0;
+if (vista !== 'diaria') {
+    console.log('💸 Cargando adelantos para cierre...');
+    
+    let queryAdelantos = supabase
+        .from('adelantos')
+        .select('barbero_id, monto')
+        .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+        .gte('created_at', fechaInicio + 'T00:00:00')
+        .lte('created_at', fechaFin + 'T23:59:59');
+    
+    // Solo filtrar por activo si es vista SEMANAL
+    if (vista === 'semanal') {
+        queryAdelantos = queryAdelantos.eq('activo', true);
+        console.log('💰 Cierre semanal: solo adelantos activos');
+    } else {
+        console.log('💰 Cierre rango: todos los adelantos históricos');
+    }
+                    
+                    // Aplicar mismo filtro que servicios
+                    if (filtro !== 'todos') {
+                        if (filtro === 'mi') {
+                            queryAdelantos = queryAdelantos.eq('barbero_id', currentUser.id);
+                        } else {
+                            queryAdelantos = queryAdelantos.eq('barbero_id', filtro);
+                        }
+                    }
+                    
+                    const { data: adelantos, error: errorAdelantos } = await queryAdelantos;
+                    
+                    if (errorAdelantos) {
+                        console.error('❌ Error cargando adelantos:', errorAdelantos);
+                    } else if (adelantos) {
+                        totalAdelantos = adelantos.reduce((sum, a) => sum + parseFloat(a.monto || 0), 0);
+                        console.log('💸 Total adelantos:', totalAdelantos);
+                    }
+                }
+                
+                // Calcular monto a pagar
+                const montoAPagar = totalRecaudado - totalAdelantos;
+                
+                // Generar HTML del cierre
+                mostrarCierre({
+                    vista,
+                    fechaInicio,
+                    fechaFin,
+                    totalRecaudado,
+                    totalServicios,
+                    totalAdelantos,
+                    montoAPagar,
+                    porFormaPago
+                });
+                
+            } catch (error) {
+                console.error('❌ Error cargando cierre:', error);
+                contenido.innerHTML = '<div class="bg-red-100 p-4 rounded-lg text-red-700">❌ Error al calcular el cierre. Intenta nuevamente.</div>';
+            }
+        }
+        
+        function mostrarCierre(datos) {
+            const {
+                vista,
+                fechaInicio,
+                fechaFin,
+                totalRecaudado,
+                totalServicios,
+                totalAdelantos,
+                montoAPagar,
+                porFormaPago
+            } = datos;
+            
+            const contenido = document.getElementById('contenidoCierre');
+            
+            let tituloVista = vista === 'diaria' ? 'DIARIO' : 
+                             vista === 'semanal' ? 'SEMANAL' : 'RANGO PERSONALIZADO';
+            
+            let fechaTexto = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
+            
+            let html = `
+                <div class="bg-white rounded-lg shadow-lg border-2 border-blue-200">
+                    <!-- Encabezado -->
+                    <div class="bg-blue-600 text-white p-6 rounded-t-lg">
+                        <h3 class="text-2xl font-bold flex items-center">
+                            💰 CIERRE DE CAJA ${tituloVista}
+                        </h3>
+                        <p class="text-blue-100 mt-2">📅 ${fechaTexto}</p>
+                    </div>
+                    
+                    <!-- Métricas principales -->
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                <div class="text-sm text-green-600 mb-1">💰 Total Recaudado</div>
+                                <div class="text-2xl font-bold text-green-900">$${totalRecaudado.toLocaleString('es-CL')}</div>
+                            </div>
+                            
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <div class="text-sm text-blue-600 mb-1">📊 Servicios Realizados</div>
+                                <div class="text-2xl font-bold text-blue-900">${totalServicios}</div>
+                            </div>
+            `;
+            
+            // Mostrar adelantos solo si no es vista diaria
+            if (vista !== 'diaria') {
+                html += `
+                            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                <div class="text-sm text-yellow-600 mb-1">💸 Adelantos del Período</div>
+                                <div class="text-2xl font-bold text-yellow-900">$${totalAdelantos.toLocaleString('es-CL')}</div>
+                            </div>
+                `;
+            } else {
+                html += `
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <div class="text-sm text-gray-600 mb-1">ℹ️ Vista Diaria</div>
+                                <div class="text-lg text-gray-700">Sin adelantos</div>
+                            </div>
+                `;
+            }
+            
+            html += `
+                        </div>
+                        
+                        <!-- MONTO A PAGAR - Destacado -->
+                        <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl mb-6 shadow-lg">
+                            <div class="text-center">
+                                <div class="text-lg font-semibold mb-2">💰 MONTO A PAGAR</div>
+                                <div class="text-4xl font-bold">${vista === 'diaria' ? 
+                                    `$${totalRecaudado.toLocaleString('es-CL')}` : 
+                                    `$${montoAPagar.toLocaleString('es-CL')}`}</div>
+                                ${vista !== 'diaria' ? `
+                                    <div class="text-purple-100 mt-2 text-sm">
+                                        (Recaudado: $${totalRecaudado.toLocaleString('es-CL')} - Adelantos: $${totalAdelantos.toLocaleString('es-CL')})
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Desglose por forma de pago -->
+                        <div class="border-t pt-6">
+                            <h4 class="font-bold text-lg mb-4 flex items-center">
+                                💳 Desglose por Forma de Pago
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium">💵 Efectivo:</span>
+                                        <span class="text-xl font-bold text-green-600">$${(porFormaPago['Efectivo'] || 0).toLocaleString('es-CL')}</span>
+                                    </div>
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium">💳 Cuenta RUT:</span>
+                                        <span class="text-xl font-bold text-blue-600">$${(porFormaPago['Cuenta RUT'] || 0).toLocaleString('es-CL')}</span>
+                                    </div>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium">📱 Mercado Pago:</span>
+                                        <span class="text-xl font-bold text-purple-600">$${(porFormaPago['Mercado Pago'] || 0).toLocaleString('es-CL')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            contenido.innerHTML = html;
+        }    
+    function loadEstadisticas() {
+            console.log('🔍 Cargando estadísticas...');
+            
+            // Verificar que sea admin
+            if (userRole !== 'admin') {
+                document.getElementById('contentArea').innerHTML = '<div class="text-red-600">❌ Sin permisos de administrador</div>';
+                return;
+            }
+            
+            document.getElementById('contentArea').innerHTML = `
+                <div class="max-w-7xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6">
+                        <i class="fas fa-chart-line mr-2"></i>Estadísticas y Análisis
+                    </h2>
+                    
+                    <!-- Gráficos Principales -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Top Servicios -->
+                        <div class="bg-white p-6 rounded-lg shadow border">
+                            <h3 class="text-lg font-bold mb-4">🔥 Servicios Más Populares </h3>
+                            <div id="topServicios">
+                                <div class="text-center py-6">
+                                    <div class="loading-spinner mx-auto"></div>
+                                    <p class="mt-4 text-gray-600">Analizando popularidad...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Métodos de Pago -->
+                        <div class="bg-white p-6 rounded-lg shadow border">
+                            <h3 class="text-lg font-bold mb-4">💳 Distribución de Pagos </h3>
+                            <div id="metodosPago">
+                                <div class="text-center py-6">
+                                    <div class="loading-spinner mx-auto"></div>
+                                    <p class="mt-4 text-gray-600">Calculando métodos...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Productividad por Barbero -->
+                        <div class="bg-white p-6 rounded-lg shadow border">
+                            <h3 class="text-lg font-bold mb-4">👨‍💼 Productividad por Barbero </h3>
+                            <div id="productividadBarberos">
+                                <div class="text-center py-6">
+                                    <div class="loading-spinner mx-auto"></div>
+                                    <p class="mt-4 text-gray-600">Midiendo rendimiento...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tendencia Semanal -->
+                        <div class="bg-white p-6 rounded-lg shadow border">
+                            <h3 class="text-lg font-bold mb-4">📅 Ingresos por días</h3>
+                            <div id="tendenciaSemanal">
+                                <div class="text-center py-6">
+                                    <div class="loading-spinner mx-auto"></div>
+                                    <p class="mt-4 text-gray-600">Analizando tendencias...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Insights Inteligentes -->
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-lg shadow-lg">
+                        <h3 class="text-xl font-bold mb-4">🎯 Insights del Negocio</h3>
+                        <div id="insightsInteligentes">
+                            <div class="text-center py-4">
+                                <div class="loading-spinner mx-auto"></div>
+                                <p class="mt-2 text-indigo-100">Generando análisis inteligente...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Cargar estadísticas
+            setTimeout(() => cargarEstadisticasOptimizadas(), 500);
+        }
+        
+        async function cargarEstadisticasOptimizadas() {
+            console.log('📊 Cargando estadísticas optimizadas...');
+            
+            try {
+                // Últimos 7 días
+                const hoy = new Date();
+                const hace7Dias = new Date();
+                hace7Dias.setDate(hoy.getDate() - 7);
+                
+                const fechaInicio = hace7Dias.toISOString().split('T')[0];
+                const fechaFin = hoy.toISOString().split('T')[0];
+                
+                // Cargar servicios
+                const { data: servicios, error } = await supabase
+                    .from('citas')
+                    .select('*')
+                    .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+                    .gte('fecha', fechaInicio)
+                    .lte('fecha', fechaFin);
+                
+                if (error) throw error;
+                
+                if (!servicios || servicios.length === 0) {
+                    mostrarSinDatos();
+                    return;
+                }
+                
+                console.log(`✅ ${servicios.length} servicios para analizar`);
+                
+                // Procesar y mostrar cada sección
+                mostrarTopServiciosOptimizado(servicios);
+                mostrarMetodosPagoOptimizado(servicios);
+                mostrarProductividadOptimizada(servicios);
+                mostrarTendenciaOptimizada(servicios);
+                mostrarInsightsOptimizados(servicios);
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                mostrarErrorEstadisticas();
+            }
+        }
+        
+       function mostrarTopServiciosOptimizado(servicios) {
+            // Mostrar botones de filtro y contenido inicial
+            const container = document.getElementById('topServicios');
+            
+            container.innerHTML = `
+                <!-- Botones de Filtro -->
+                <div class="flex flex-wrap gap-2 mb-4 justify-center">
+                    <button onclick="filtrarTopServicios('7d')" id="btn-7d" class="filtro-btn filtro-activo px-3 py-1 text-sm rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors">
+                        7 días
+                    </button>
+                    <button onclick="filtrarTopServicios('30d')" id="btn-30d" class="filtro-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                        30 días
+                    </button>
+                    <button onclick="filtrarTopServicios('3m')" id="btn-3m" class="filtro-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                        3 meses
+                    </button>
+                    <button onclick="filtrarTopServicios('1y')" id="btn-1y" class="filtro-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                        1 año
+                    </button>
+                    <button onclick="filtrarTopServicios('todo')" id="btn-todo" class="filtro-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                        Siempre
+                    </button>
+                </div>
+                
+                <!-- Contenedor del Gráfico -->
+                <div id="graficoTopServicios">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner mx-auto"></div>
+                        <p class="mt-2 text-gray-600">Cargando servicios...</p>
+                    </div>
+                </div>
+            `;
+            
+            // Cargar datos inicial (7 días)
+            window.serviciosGlobalesStats = servicios; // Guardar para uso posterior
+            filtrarTopServicios('7d');
+        }
+        
+        async function filtrarTopServicios(periodo) {
+            console.log(`📊 Filtrando top servicios por: ${periodo}`);
+            
+            // Actualizar estado visual de botones
+            document.querySelectorAll('.filtro-btn').forEach(btn => {
+                btn.classList.remove('filtro-activo', 'bg-blue-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            
+            const btnActivo = document.getElementById(`btn-${periodo}`);
+            if (btnActivo) {
+                btnActivo.classList.add('filtro-activo', 'bg-blue-600', 'text-white');
+                btnActivo.classList.remove('bg-gray-200', 'text-gray-700');
+            }
+            
+            // Mostrar loading
+            const container = document.getElementById('graficoTopServicios');
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="loading-spinner mx-auto"></div>
+                    <p class="mt-2 text-gray-600">Analizando ${periodo === '7d' ? '7 días' : periodo === '30d' ? '30 días' : periodo === '3m' ? '3 meses' : periodo === '1y' ? '1 año' : 'todos los datos'}...</p>
+                </div>
+            `;
+            
+            try {
+                // Calcular fechas según el período
+                const hoy = new Date();
+                let fechaInicio;
+                
+                switch(periodo) {
+                    case '7d':
+                        fechaInicio = new Date();
+                        fechaInicio.setDate(hoy.getDate() - 7);
+                        break;
+                    case '30d':
+                        fechaInicio = new Date();
+                        fechaInicio.setDate(hoy.getDate() - 30);
+                        break;
+                    case '3m':
+                        fechaInicio = new Date();
+                        fechaInicio.setMonth(hoy.getMonth() - 3);
+                        break;
+                    case '1y':
+                        fechaInicio = new Date();
+                        fechaInicio.setFullYear(hoy.getFullYear() - 1);
+                        break;
+                    case 'todo':
+                        fechaInicio = new Date('2020-01-01'); // Fecha muy antigua
+                        break;
+                }
+                
+                const fechaFin = hoy.toISOString().split('T')[0];
+                const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+                
+                console.log(`📅 Consultando desde ${fechaInicioStr} hasta ${fechaFin}`);
+                
+                // Cargar servicios del período
+                const { data: servicios, error } = await supabase
+                    .from('citas')
+                    .select('servicio_principal_nombre, monto_total')
+                   .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+                    .gte('fecha', fechaInicioStr)
+                    .lte('fecha', fechaFin);
+                
+                if (error) throw error;
+                
+                if (!servicios || servicios.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <div class="text-4xl mb-2">📊</div>
+                            <p>No hay servicios registrados en ${periodo === '7d' ? 'los últimos 7 días' : periodo === '30d' ? 'los últimos 30 días' : periodo === '3m' ? 'los últimos 3 meses' : periodo === '1y' ? 'el último año' : 'el histórico'}</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Procesar datos
+                const conteoServicios = {};
+                servicios.forEach(s => {
+                    const servicio = s.servicio_principal_nombre;
+                    conteoServicios[servicio] = (conteoServicios[servicio] || 0) + 1;
+                });
+                
+                const top5 = Object.entries(conteoServicios)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 5);
+                
+                if (top5.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <p>No hay datos suficientes para mostrar</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Generar gráfico
+                const maxCount = top5[0]?.[1] || 1;
+                const totalServicios = servicios.length;
+                
+                let html = '<div class="space-y-3">';
+                top5.forEach(([servicio, cantidad], index) => {
+                    const porcentaje = Math.round((cantidad / totalServicios) * 100);
+                    const barWidth = Math.round((cantidad / maxCount) * 100);
+                    
+                    // Colores diferentes para cada barra
+                    const colores = [
+                        'from-red-400 to-red-600',
+                        'from-orange-400 to-orange-600', 
+                        'from-yellow-400 to-yellow-600',
+                        'from-green-400 to-green-600',
+                        'from-blue-400 to-blue-600'
+                    ];
+                    const color = colores[index] || 'from-gray-400 to-gray-600';
+                    
+                    const nombreCorto = servicio.length > 25 ? servicio.substring(0, 25) + '...' : servicio;
+                    
+                    html += `
+                        <div class="mb-3">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="text-sm font-medium text-gray-700 flex-1" title="${servicio}">
+                                    ${nombreCorto}
+                                </div>
+                                <div class="text-sm font-bold text-gray-600 ml-2">${cantidad} (${porcentaje}%)</div>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                                <div class="bg-gradient-to-r ${color} h-4 rounded-full transition-all duration-1000 flex items-center justify-end pr-2" style="width: ${barWidth}%">
+                                    <span class="text-xs text-white font-semibold">${cantidad}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                
+                // Agregar resumen del período
+                html += `
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="text-xs text-gray-500 text-center">
+                            📊 Total analizado: <span class="font-semibold">${totalServicios} servicios</span> en 
+                            <span class="font-semibold">${periodo === '7d' ? '7 días' : periodo === '30d' ? '30 días' : periodo === '3m' ? '3 meses' : periodo === '1y' ? '1 año' : 'todo el histórico'}</span>
+                        </div>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Error filtrando servicios:', error);
+                container.innerHTML = `
+                    <div class="text-center py-4 text-red-600">
+                        <div class="text-2xl mb-2">⚠️</div>
+                        <p>Error al cargar datos del período</p>
+                    </div>
+                `;
+            }
+        }
+        // DISTIBUIÓN DE PAGOS
+async function filtrarMetodosPago(periodo) {
+    console.log(`💳 Filtrando métodos de pago por: ${periodo}`);
+    
+    // Actualizar estado visual de botones
+    document.querySelectorAll('.filtro-pago-btn').forEach(btn => {
+        btn.classList.remove('filtro-pago-activo', 'bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    
+    const btnActivo = document.getElementById(`btn-pago-${periodo}`);
+    if (btnActivo) {
+        btnActivo.classList.add('filtro-pago-activo', 'bg-blue-600', 'text-white');
+        btnActivo.classList.remove('bg-gray-200', 'text-gray-700');
+    }
+    
+    // Mostrar loading
+    const container = document.getElementById('graficoMetodosPago');
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-2 text-gray-600">Analizando ${periodo === '7d' ? '7 días' : periodo === '30d' ? '30 días' : periodo === '3m' ? '3 meses' : periodo === '1y' ? '1 año' : 'todos los datos'}...</p>
+        </div>
+    `;
+    
+    try {
+        // Calcular fechas según el período
+        const hoy = new Date();
+        let fechaInicio;
+        
+        switch(periodo) {
+            case '7d':
+                fechaInicio = new Date();
+                fechaInicio.setDate(hoy.getDate() - 7);
+                break;
+            case '30d':
+                fechaInicio = new Date();
+                fechaInicio.setDate(hoy.getDate() - 30);
+                break;
+            case '3m':
+                fechaInicio = new Date();
+                fechaInicio.setMonth(hoy.getMonth() - 3);
+                break;
+            case '1y':
+                fechaInicio = new Date();
+                fechaInicio.setFullYear(hoy.getFullYear() - 1);
+                break;
+            case 'todo':
+                fechaInicio = new Date('2020-01-01'); // Fecha muy antigua
+                break;
+        }
+        
+        const fechaFin = hoy.toISOString().split('T')[0];
+        const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+        
+        console.log(`📅 Consultando métodos desde ${fechaInicioStr} hasta ${fechaFin}`);
+        
+        // Cargar servicios del período
+        const { data: servicios, error } = await supabase
+            .from('citas')
+            .select('forma_pago, monto_total')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .gte('fecha', fechaInicioStr)
+            .lte('fecha', fechaFin);
+        
+        if (error) throw error;
+        
+        if (!servicios || servicios.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">💳</div>
+                    <p>No hay pagos registrados en ${periodo === '7d' ? 'los últimos 7 días' : periodo === '30d' ? 'los últimos 30 días' : periodo === '3m' ? 'los últimos 3 meses' : periodo === '1y' ? 'el último año' : 'el histórico'}</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Procesar datos de métodos de pago
+        const metodos = {};
+        let total = 0;
+        
+        servicios.forEach(s => {
+            const metodo = s.forma_pago;
+            const monto = parseFloat(s.monto_total || 0);
+            metodos[metodo] = (metodos[metodo] || 0) + monto;
+            total += monto;
+        });
+        
+        if (total === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <p>No hay datos suficientes para mostrar</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Generar gráfico
+        const colores = {
+            'Efectivo': 'from-green-400 to-green-600',
+            'Cuenta RUT': 'from-blue-400 to-blue-600',
+            'Mercado Pago': 'from-purple-400 to-purple-600'
+        };
+        
+        let html = '<div class="space-y-4">';
+        Object.entries(metodos).forEach(([metodo, monto]) => {
+            const porcentaje = Math.round((monto / total) * 100);
+            const color = colores[metodo] || 'from-gray-400 to-gray-600';
+            
+            html += `
+                <div class="bg-gradient-to-r ${color} text-white p-4 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-sm opacity-90">${metodo}</div>
+                            <div class="text-xl font-bold">$${monto.toLocaleString('es-CL')}</div>
+                        </div>
+                        <div class="text-2xl font-bold">${porcentaje}%</div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        // Agregar resumen del período
+        html += `
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <div class="text-xs text-gray-500 text-center">
+                    💳 Total analizado: <span class="font-semibold">$${total.toLocaleString('es-CL')}</span> en 
+                    <span class="font-semibold">${periodo === '7d' ? '7 días' : periodo === '30d' ? '30 días' : periodo === '3m' ? '3 meses' : periodo === '1y' ? '1 año' : 'todo el histórico'}</span>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error filtrando métodos de pago:', error);
+        container.innerHTML = `
+            <div class="text-center py-4 text-red-600">
+                <div class="text-2xl mb-2">⚠️</div>
+                <p>Error al cargar datos del período</p>
+            </div>
+        `;
+    }
+}
+async function filtrarProductividad(periodo) {
+    console.log(`👨‍💼 Filtrando productividad por: ${periodo}`);
+    
+    // Actualizar estado visual de botones
+    document.querySelectorAll('.filtro-productividad-btn').forEach(btn => {
+        btn.classList.remove('filtro-productividad-activo', 'bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    
+    const btnActivo = document.getElementById(`btn-prod-${periodo}`);
+    if (btnActivo) {
+        btnActivo.classList.add('filtro-productividad-activo', 'bg-blue-600', 'text-white');
+        btnActivo.classList.remove('bg-gray-200', 'text-gray-700');
+    }
+    
+    // Mostrar loading
+    const container = document.getElementById('graficoProductividad');
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-2 text-gray-600">Analizando ${periodo === '7d' ? '7 días' : periodo === '30d' ? '30 días' : periodo === '3m' ? '3 meses' : periodo === '1y' ? '1 año' : 'todos los datos'}...</p>
+        </div>
+    `;
+    
+    try {
+        // Calcular fechas según el período
+        const hoy = new Date();
+        let fechaInicio;
+        
+        switch(periodo) {
+            case '7d':
+                fechaInicio = new Date();
+                fechaInicio.setDate(hoy.getDate() - 7);
+                break;
+            case '30d':
+                fechaInicio = new Date();
+                fechaInicio.setDate(hoy.getDate() - 30);
+                break;
+            case '3m':
+                fechaInicio = new Date();
+                fechaInicio.setMonth(hoy.getMonth() - 3);
+                break;
+            case '1y':
+                fechaInicio = new Date();
+                fechaInicio.setFullYear(hoy.getFullYear() - 1);
+                break;
+            case 'todo':
+                fechaInicio = new Date('2020-01-01'); // Fecha muy antigua
+                break;
+        }
+        
+        const fechaFin = hoy.toISOString().split('T')[0];
+        const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+        
+        console.log(`📅 Consultando productividad desde ${fechaInicioStr} hasta ${fechaFin}`);
+        
+        // Cargar servicios del período
+        const { data: servicios, error } = await supabase
+            .from('citas')
+            .select('realizado_por_id, monto_total, usuarios!inner(nombre)')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .gte('fecha', fechaInicioStr)
+            .lte('fecha', fechaFin)
+            .eq('usuarios.activo', true);
+        
+        if (error) throw error;
+        
+        if (!servicios || servicios.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">👨‍💼</div>
+                    <p>No hay servicios registrados en ${periodo === '7d' ? 'los últimos 7 días' : periodo === '30d' ? 'los últimos 30 días' : periodo === '3m' ? 'los últimos 3 meses' : periodo === '1y' ? 'el último año' : 'el histórico'}</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Procesar datos de productividad
+       const barberos = {};
+servicios.forEach(s => {
+    const barberoId = s.realizado_por_id;
+    const barberoNombre = s.usuarios.nombre;
+    
+    if (!barberos[barberoId]) {
+        barberos[barberoId] = { 
+            nombre: barberoNombre, 
+            servicios: 0, 
+            monto: 0 
+        };
+    }
+    barberos[barberoId].servicios++;
+    barberos[barberoId].monto += parseFloat(s.monto_total || 0);
+});
+        
+        if (Object.keys(barberos).length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <p>No hay datos suficientes para mostrar</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Ordenar por número de servicios
+        const barberosArray = Object.entries(barberos)
+            .sort(([,a], [,b]) => b.servicios - a.servicios);
+        
+        // Generar gráfico
+        const coloresBarberos = [
+            'from-blue-500 to-indigo-600', 
+            'from-green-500 to-teal-600', 
+            'from-purple-500 to-pink-600',
+            'from-orange-500 to-red-600',
+            'from-yellow-500 to-orange-600'
+        ];
+        
+        let html = '<div class="space-y-3">';
+       barberosArray.forEach(([barberoId, data], index) => {
+            const porcentajeServicios = Math.round((data.servicios / servicios.length) * 100);
+            const promedioPorServicio = Math.round(data.monto / data.servicios);
+            const color = coloresBarberos[index] || 'from-gray-500 to-gray-600';
+            
+            html += `
+                <div class="bg-gradient-to-r ${color} text-white p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div>
+                           <div class="font-bold text-lg">${data.nombre}</div>
+                            <div class="text-sm opacity-90">${data.servicios} servicios (${porcentajeServicios}%)</div>
+                            <div class="text-sm opacity-90">Promedio: $${promedioPorServicio.toLocaleString('es-CL')}/servicio</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xl font-bold">$${data.monto.toLocaleString('es-CL')}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        // Agregar resumen del período
+        const totalServicios = servicios.length;
+        const totalMonto = servicios.reduce((sum, s) => sum + parseFloat(s.monto_total || 0), 0);
+        
+        html += `
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <div class="text-xs text-gray-500 text-center">
+                    👨‍💼 Total analizado: <span class="font-semibold">${totalServicios} servicios</span> - 
+                    <span class="font-semibold">$${totalMonto.toLocaleString('es-CL')}</span> en 
+                    <span class="font-semibold">${periodo === '7d' ? '7 días' : periodo === '30d' ? '30 días' : periodo === '3m' ? '3 meses' : periodo === '1y' ? '1 año' : 'todo el histórico'}</span>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error filtrando productividad:', error);
+        container.innerHTML = `
+            <div class="text-center py-4 text-red-600">
+                <div class="text-2xl mb-2">⚠️</div>
+                <p>Error al cargar datos del período</p>
+            </div>
+        `;
+    }
+}
+        async function filtrarTendencia(periodo) {
+    console.log(`📅 Filtrando tendencia por: ${periodo}`);
+    
+    // Actualizar estado visual de botones
+    document.querySelectorAll('.filtro-tendencia-btn').forEach(btn => {
+        btn.classList.remove('filtro-tendencia-activo', 'bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    
+    const btnActivo = document.getElementById(`btn-tend-${periodo}`);
+    if (btnActivo) {
+        btnActivo.classList.add('filtro-tendencia-activo', 'bg-blue-600', 'text-white');
+        btnActivo.classList.remove('bg-gray-200', 'text-gray-700');
+    }
+    
+    // Mostrar loading
+    const container = document.getElementById('graficoTendencia');
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-2 text-gray-600">Analizando ${periodo === '7d' ? '7 días' : periodo === '30d' ? '30 días' : periodo === '3m' ? '3 meses' : periodo === '1y' ? '1 año' : 'todos los datos'}...</p>
+        </div>
+    `;
+    
+    try {
+        // Calcular fechas según el período
+        const hoy = new Date();
+        let fechaInicio;
+        
+        switch(periodo) {
+            case '7d':
+                fechaInicio = new Date();
+                fechaInicio.setDate(hoy.getDate() - 7);
+                break;
+            case '30d':
+                fechaInicio = new Date();
+                fechaInicio.setDate(hoy.getDate() - 30);
+                break;
+            case '3m':
+                fechaInicio = new Date();
+                fechaInicio.setMonth(hoy.getMonth() - 3);
+                break;
+            case '1y':
+                fechaInicio = new Date();
+                fechaInicio.setFullYear(hoy.getFullYear() - 1);
+                break;
+            case 'todo':
+                fechaInicio = new Date('2020-01-01'); // Fecha muy antigua
+                break;
+        }
+        
+        const fechaFin = hoy.toISOString().split('T')[0];
+        const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+        
+        console.log(`📅 Consultando tendencia desde ${fechaInicioStr} hasta ${fechaFin}`);
+        
+        // Cargar servicios del período
+        const { data: servicios, error } = await supabase
+            .from('citas')
+            .select('fecha, monto_total')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .gte('fecha', fechaInicioStr)
+            .lte('fecha', fechaFin)
+            .order('fecha', { ascending: true });
+        
+        if (error) throw error;
+        
+        if (!servicios || servicios.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">📅</div>
+                    <p>No hay ingresos registrados en ${periodo === '7d' ? 'los últimos 7 días' : periodo === '30d' ? 'los últimos 30 días' : periodo === '3m' ? 'los últimos 3 meses' : periodo === '1y' ? 'el último año' : 'el histórico'}</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Procesar datos por día
+        const porDia = {};
+        servicios.forEach(s => {
+            const fecha = s.fecha;
+            if (!porDia[fecha]) {
+                porDia[fecha] = { servicios: 0, monto: 0 };
+            }
+            porDia[fecha].servicios++;
+            porDia[fecha].monto += parseFloat(s.monto_total || 0);
+        });
+        
+        // Convertir a array y ordenar por fecha
+        const dias = Object.entries(porDia)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([fecha, data]) => ({
+                fecha,
+                dia: new Date(fecha + 'T00:00:00').toLocaleDateString('es-CL', { 
+                    weekday: 'short', 
+                    day: 'numeric',
+                    month: 'short'
+                }),
+                servicios: data.servicios,
+                monto: data.monto
+            }));
+        
+        if (dias.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <p>No hay datos suficientes para mostrar tendencias</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Generar gráfico de barras por día
+        const maxMonto = Math.max(...dias.map(d => d.monto));
+        
+        let html = '<div class="space-y-2">';
+        dias.forEach(dia => {
+            const altura = maxMonto > 0 ? Math.round((dia.monto / maxMonto) * 100) : 0;
+            const intensidad = altura > 80 ? 'from-red-400 to-red-600' : 
+                              altura > 60 ? 'from-orange-400 to-orange-600' :
+                              altura > 40 ? 'from-yellow-400 to-yellow-600' : 
+                              altura > 20 ? 'from-green-400 to-green-600' : 'from-gray-400 to-gray-500';
+            
+            const montoK = dia.monto >= 1000 ? `$${Math.round(dia.monto/1000)}k` : `$${Math.round(dia.monto)}`;
+            
+            html += `
+                <div class="flex items-center space-x-3">
+                    <div class="w-20 text-sm font-medium text-gray-700 text-right">${dia.dia}</div>
+                    <div class="flex-1 bg-gray-200 rounded-full h-8 relative min-w-0">
+                        <div class="bg-gradient-to-r ${intensidad} h-8 rounded-full transition-all duration-1000 min-w-max" style="width: ${Math.max(altura, 15)}%"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-xs font-bold text-white px-2">${dia.servicios} serv - ${montoK}</span>
+                        </div>
+                    </div>
+                    <div class="w-24 text-right text-sm font-semibold text-gray-800">
+                        $${dia.monto.toLocaleString('es-CL')}
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        // Agregar resumen del período
+        const totalDias = dias.length;
+        const totalMonto = dias.reduce((sum, d) => sum + d.monto, 0);
+        const totalServicios = dias.reduce((sum, d) => sum + d.servicios, 0);
+        const promedioDiario = Math.round(totalMonto / totalDias);
+        
+        html += `
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <div class="text-xs text-gray-500 text-center">
+                    📅 Período analizado: <span class="font-semibold">${totalDias} días</span> - 
+                    <span class="font-semibold">${totalServicios} servicios</span> - 
+                    <span class="font-semibold">$${totalMonto.toLocaleString('es-CL')}</span><br>
+                    💰 Promedio diario: <span class="font-semibold">$${promedioDiario.toLocaleString('es-CL')}</span>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error filtrando tendencia:', error);
+        container.innerHTML = `
+            <div class="text-center py-4 text-red-600">
+                <div class="text-2xl mb-2">⚠️</div>
+                <p>Error al cargar datos del período</p>
+            </div>
+        `;
+    }
+}
+        // Mostrar Métodos de pago
+      function mostrarMetodosPagoOptimizado(servicios) {
+    // Mostrar botones de filtro y contenido inicial
+    const container = document.getElementById('metodosPago');
+    
+    container.innerHTML = `
+        <!-- Botones de Filtro -->
+        <div class="flex flex-wrap gap-2 mb-4 justify-center">
+            <button onclick="filtrarMetodosPago('7d')" id="btn-pago-7d" class="filtro-pago-btn filtro-pago-activo px-3 py-1 text-sm rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors">
+                7 días
+            </button>
+            <button onclick="filtrarMetodosPago('30d')" id="btn-pago-30d" class="filtro-pago-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                30 días
+            </button>
+            <button onclick="filtrarMetodosPago('3m')" id="btn-pago-3m" class="filtro-pago-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                3 meses
+            </button>
+            <button onclick="filtrarMetodosPago('1y')" id="btn-pago-1y" class="filtro-pago-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                1 año
+            </button>
+            <button onclick="filtrarMetodosPago('todo')" id="btn-pago-todo" class="filtro-pago-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                Siempre
+            </button>
+        </div>
+        
+        <!-- Contenedor del Gráfico -->
+        <div id="graficoMetodosPago">
+            <div class="text-center py-4">
+                <div class="loading-spinner mx-auto"></div>
+                <p class="mt-2 text-gray-600">Cargando métodos...</p>
+            </div>
+        </div>
+    `;
+    
+    // Guardar servicios para filtros y cargar datos inicial (7 días)
+    window.serviciosGlobalesMetodos = servicios;
+    filtrarMetodosPago('7d');
+}
+        // PRODUCTIVIDAD POR BARBERO
+        
+      function mostrarProductividadOptimizada(servicios) {
+    // Mostrar botones de filtro y contenido inicial
+    const container = document.getElementById('productividadBarberos');
+    
+    container.innerHTML = `
+        <!-- Botones de Filtro -->
+        <div class="flex flex-wrap gap-2 mb-4 justify-center">
+            <button onclick="filtrarProductividad('7d')" id="btn-prod-7d" class="filtro-productividad-btn filtro-productividad-activo px-3 py-1 text-sm rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors">
+                7 días
+            </button>
+            <button onclick="filtrarProductividad('30d')" id="btn-prod-30d" class="filtro-productividad-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                30 días
+            </button>
+            <button onclick="filtrarProductividad('3m')" id="btn-prod-3m" class="filtro-productividad-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                3 meses
+            </button>
+            <button onclick="filtrarProductividad('1y')" id="btn-prod-1y" class="filtro-productividad-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                1 año
+            </button>
+            <button onclick="filtrarProductividad('todo')" id="btn-prod-todo" class="filtro-productividad-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                Siempre
+            </button>
+        </div>
+        
+        <!-- Contenedor del Gráfico -->
+        <div id="graficoProductividad">
+            <div class="text-center py-4">
+                <div class="loading-spinner mx-auto"></div>
+                <p class="mt-2 text-gray-600">Midiendo rendimiento...</p>
+            </div>
+        </div>
+    `;
+    
+    // Guardar servicios para filtros y cargar datos inicial (7 días)
+    window.serviciosGlobalesProductividad = servicios;
+    filtrarProductividad('7d');
+}
+        
+      function mostrarTendenciaOptimizada(servicios) {
+    // Mostrar botones de filtro y contenido inicial
+    const container = document.getElementById('tendenciaSemanal');
+    
+    container.innerHTML = `
+        <!-- Botones de Filtro -->
+        <div class="flex flex-wrap gap-2 mb-4 justify-center">
+            <button onclick="filtrarTendencia('7d')" id="btn-tend-7d" class="filtro-tendencia-btn filtro-tendencia-activo px-3 py-1 text-sm rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors">
+                7 días
+            </button>
+            <button onclick="filtrarTendencia('30d')" id="btn-tend-30d" class="filtro-tendencia-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                30 días
+            </button>
+            <button onclick="filtrarTendencia('3m')" id="btn-tend-3m" class="filtro-tendencia-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                3 meses
+            </button>
+            <button onclick="filtrarTendencia('1y')" id="btn-tend-1y" class="filtro-tendencia-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                1 año
+            </button>
+            <button onclick="filtrarTendencia('todo')" id="btn-tend-todo" class="filtro-tendencia-btn px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition-colors">
+                Siempre
+            </button>
+        </div>
+        
+        <!-- Contenedor del Gráfico -->
+        <div id="graficoTendencia">
+            <div class="text-center py-4">
+                <div class="loading-spinner mx-auto"></div>
+                <p class="mt-2 text-gray-600">Analizando tendencias...</p>
+            </div>
+        </div>
+    `;
+    
+    // Guardar servicios para filtros y cargar datos inicial (7 días)
+    window.serviciosGlobalesTendencia = servicios;
+    filtrarTendencia('7d');
+}
+        
+        function mostrarInsightsOptimizados(servicios) {
+            // Calcular insights
+            const totalMonto = servicios.reduce((sum, s) => sum + parseFloat(s.monto_total || 0), 0);
+            const promedioServicio = Math.round(totalMonto / servicios.length);
+            
+            // Día con más servicios
+            const porDia = {};
+            servicios.forEach(s => {
+                porDia[s.fecha] = (porDia[s.fecha] || 0) + 1;
+            });
+            
+            const mejorDia = Object.entries(porDia)
+                .sort(([,a], [,b]) => b - a)[0];
+            
+            const diaNombre = mejorDia ? new Date(mejorDia[0] + 'T00:00:00').toLocaleDateString('es-CL', { weekday: 'long' }) : 'N/A';
+            
+            // Servicio más popular
+            const serviciosCount = {};
+            servicios.forEach(s => {
+                serviciosCount[s.servicio_principal_nombre] = (serviciosCount[s.servicio_principal_nombre] || 0) + 1;
+            });
+            
+            const servicioTop = Object.entries(serviciosCount)
+                .sort(([,a], [,b]) => b - a)[0];
+            
+            // Barbero más productivo
+            const barberoStats = {};
+            servicios.forEach(s => {
+                barberoStats[s.realizado_por_nombre] = (barberoStats[s.realizado_por_nombre] || 0) + 1;
+            });
+            
+            const topBarbero = Object.entries(barberoStats)
+                .sort(([,a], [,b]) => b - a)[0];
+            
+            const insights = [
+                `💰 Ticket promedio por servicio: $${promedioServicio.toLocaleString('es-CL')}`,
+                `🗓️ Tu mejor día de la semana es: ${diaNombre} (${mejorDia?.[1] || 0} servicios)`,
+                `🔥 Servicio estrella: "${servicioTop?.[0] || 'N/A'}" (${servicioTop?.[1] || 0} veces)`,
+                `🏆 Barbero más activo: ${topBarbero?.[0] || 'N/A'} (${topBarbero?.[1] || 0} servicios)`
+            ];
+            
+            let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+            insights.forEach(insight => {
+                html += `
+                    <div class="bg-white bg-opacity-20 p-4 rounded-lg">
+                        <div class="text-white font-medium">${insight}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            document.getElementById('insightsInteligentes').innerHTML = html;
+        }
+        
+        function mostrarSinDatos() {
+            const elementos = ['topServicios', 'metodosPago', 'productividadBarberos', 'tendenciaSemanal', 'insightsInteligentes'];
+            elementos.forEach(id => {
+                const elemento = document.getElementById(id);
+                if (elemento) {
+                    elemento.innerHTML = '<div class="text-center py-8 text-gray-500">📊 Sin datos suficientes para mostrar estadísticas</div>';
+                }
+            });
+        }
+        // ===============================
+// PESTAÑA: AGENDA
+// ===============================
+function loadAgenda() {
+    console.log('📅 Cargando agenda...');
+    
+    document.getElementById('contentArea').innerHTML = `
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6">
+                <i class="fas fa-calendar-alt mr-2"></i>Agenda de Citas
+            </h2>
+            
+            ${userRole === 'admin' ? `
+            <!-- Filtro de Barbero (solo admin) -->
+            <div class="mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Barbero:</label>
+                        <select id="selectBarberoAgenda" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarCitasAgenda()">
+                            <option value="todos">Ver Todas las Citas</option>
+                            <option value="mi">Mis Citas</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Período:</label>
+                        <select id="periodoAgenda" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarCitasAgenda()">
+                            <option value="proximas">Próximas Citas</option>
+                            <option value="hoy">Solo Hoy</option>
+                            <option value="semana">Esta Semana</option>
+                            <option value="mes">Este Mes</option>
+                            <option value="todas">Todas</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            ` : `
+            <!-- Empleado: Solo período -->
+            <div class="mb-6">
+                <div class="max-w-md">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ver mis citas:</label>
+                    <select id="periodoAgenda" class="w-full px-4 py-2 border border-gray-300 rounded-lg" onchange="cargarCitasAgenda()">
+                        <option value="proximas">Próximas Citas</option>
+                        <option value="hoy">Solo Hoy</option>
+                        <option value="semana">Esta Semana</option>
+                        <option value="mes">Este Mes</option>
+                        <option value="todas">Todas</option>
+                    </select>
+                </div>
+            </div>
+            `}
+            
+            <!-- Contenedor de Citas -->
+            <div id="contenidoAgenda" class="mt-6">
+                <div class="text-center py-8">
+                    <div class="loading-spinner mx-auto"></div>
+                    <p class="mt-4 text-gray-600">Cargando citas...</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Cargar barberos para filtro si es admin
+    if (userRole === 'admin') {
+        cargarBarberosEnFiltroAgenda();
+    }
+    
+   // Cargar citas inicial
+cargarCitasAgenda();
+
+// Auto-refresh cada 30 segundos
+if (window.agendaInterval) {
+    clearInterval(window.agendaInterval);
+}
+window.agendaInterval = setInterval(() => {
+    console.log('🔄 Auto-refresh agenda...');
+    cargarCitasAgenda();
+}, 30000); // 30 segundos
+}
+
+async function cargarBarberosEnFiltroAgenda() {
+    try {
+        console.log('🔍 Cargando barberos para filtro agenda...');
+        
+        const { data: barberos, error } = await supabase
+            .from('usuarios')
+            .select('id, nombre')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .eq('activo', true);
+        
+        if (error) throw error;
+        
+        const select = document.getElementById('selectBarberoAgenda');
+        if (!select) return;
+        
+        // Limpiar opciones actuales (mantener las 2 primeras)
+        while (select.children.length > 2) {
+            select.removeChild(select.lastChild);
+        }
+        
+        // Agregar todos los barberos dinámicamente
+        barberos.forEach(barbero => {
+            if (barbero.id !== currentUser.id) {  // No agregar al usuario actual
+                const option = document.createElement('option');
+                option.value = barbero.id;
+                option.textContent = barbero.nombre;
+                select.appendChild(option);
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error cargando barberos:', error);
+    }
+}
+
+async function cargarCitasAgenda() {
+    const contenido = document.getElementById('contenidoAgenda');
+    if (!contenido) return;
+    
+    contenido.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto"></div><p class="mt-4 text-gray-600">📅 Cargando citas...</p></div>';
+    
+    try {
+        console.log('📅 Cargando citas de agenda...');
+        
+        // Obtener filtros
+        const periodo = document.getElementById('periodoAgenda').value;
+        const filtro = document.getElementById('selectBarberoAgenda')?.value || 'mi';
+        
+        // Calcular fechas según período
+        const hoy = new Date();
+        let fechaDesde, fechaHasta;
+        
+        switch(periodo) {
+            case 'hoy':
+                fechaDesde = hoy.toISOString().split('T')[0];
+                fechaHasta = hoy.toISOString().split('T')[0];
+                break;
+            case 'proximas':
+                fechaDesde = hoy.toISOString().split('T')[0];
+                const en30Dias = new Date(hoy);
+                en30Dias.setDate(hoy.getDate() + 30);
+                fechaHasta = en30Dias.toISOString().split('T')[0];
+                break;
+            case 'semana':
+                const inicioSemana = new Date(hoy);
+                inicioSemana.setDate(hoy.getDate() - hoy.getDay() + 1); // Lunes
+                const finSemana = new Date(inicioSemana);
+                finSemana.setDate(inicioSemana.getDate() + 6); // Domingo
+                fechaDesde = inicioSemana.toISOString().split('T')[0];
+                fechaHasta = finSemana.toISOString().split('T')[0];
+                break;
+            case 'mes':
+                fechaDesde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+                fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+                break;
+            case 'todas':
+                fechaDesde = '2024-01-01'; // Fecha muy antigua
+                fechaHasta = new Date(hoy.getFullYear() + 1, 11, 31).toISOString().split('T')[0]; // Año siguiente
+                break;
+        }
+        
+        console.log(`📊 Buscando citas desde ${fechaDesde} hasta ${fechaHasta}`);
+        
+        // Simular carga desde Formspree (por ahora datos demo)
+        const citasReales = await obtenerCitasDesdeSupabase(fechaDesde, fechaHasta, filtro);
+        
+        mostrarCitasAgenda(citasReales, periodo);
+        
+    } catch (error) {
+        console.error('❌ Error cargando citas:', error);
+        contenido.innerHTML = '<div class="bg-red-100 p-4 rounded-lg text-red-700 text-center">❌ Error al cargar las citas</div>';
+    }
+}
+
+async function obtenerCitasDesdeSupabase(fechaDesde, fechaHasta, filtro) {
+    console.log('🔄 Cargando citas reales desde Supabase...');
+    
+    try {
+        // Construir query base
+        let query = supabase
+            .from('reservas')
+            .select(`
+                *,
+                usuarios!barbero_id(nombre)
+            `)
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .gte('fecha', fechaDesde)
+            .lte('fecha', fechaHasta)
+            .order('fecha', { ascending: true })
+            .order('hora', { ascending: true });
+        
+        // Aplicar filtro según rol y selección
+        if (userRole === 'empleado') {
+            // Empleado: solo SUS citas
+            query = query.eq('barbero_id', currentUser.id);
+        } else if (userRole === 'admin') {
+            // Admin: aplicar filtro seleccionado
+            if (filtro === 'mi') {
+                query = query.eq('barbero_id', currentUser.id);
+            } else if (filtro !== 'todos') {
+                query = query.eq('barbero_id', filtro);
+            }
+            // Si es 'todos', no agregar filtro (mostrar todas)
+        }
+        
+        const { data: reservas, error } = await query;
+        
+        if (error) {
+            console.error('❌ Error cargando reservas:', error);
+            throw error;
+        }
+        
+        console.log(`✅ ${reservas?.length || 0} reservas cargadas desde Supabase`);
+        
+        // Convertir formato Supabase al formato esperado por la agenda
+        const citasFormateadas = (reservas || []).map(reserva => ({
+            fecha: reserva.fecha,
+            hora: reserva.hora,
+            cliente_nombre: reserva.cliente_nombre,
+            cliente_telefono: reserva.cliente_telefono,
+            cliente_email: reserva.cliente_email,
+            barbero_nombre: reserva.barbero_nombre,
+            barbero_id: reserva.barbero_id,
+            notas: reserva.notas,
+            barberia_nombre: window.CURRENT_BARBERIA_DATA?.nombre || 'Barbería',
+            estado: reserva.estado,
+            id: reserva.id // Para futuras acciones
+        }));
+        
+        return citasFormateadas;
+        
+    } catch (error) {
+        console.error('❌ Error crítico cargando citas:', error);
+        return []; // Devolver array vacío en caso de error
+    }
+}
+function mostrarCitasAgenda(citas, periodo) {
+    const contenido = document.getElementById('contenidoAgenda');
+    
+    if (!citas || citas.length === 0) {
+        const mensajePeriodo = {
+            'hoy': 'hoy',
+            'proximas': 'próximas',
+            'semana': 'esta semana',
+            'mes': 'este mes',
+            'todas': 'en el histórico'
+        };
+        
+        contenido.innerHTML = `
+            <div class="text-center py-12">
+                <i class="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-600 mb-2">No hay citas ${mensajePeriodo[periodo] || ''}</h3>
+                <p class="text-gray-500">Las citas aparecerán aquí cuando los clientes hagan reservas</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Ordenar citas por fecha y hora
+    citas.sort((a, b) => {
+        const fechaA = new Date(a.fecha + 'T' + a.hora);
+        const fechaB = new Date(b.fecha + 'T' + b.hora);
+        return fechaA - fechaB;
+    });
+    
+    let html = `
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4">
+                <h3 class="text-lg font-bold flex items-center">
+                    <i class="fas fa-calendar-check mr-2"></i>
+                    ${userRole === 'empleado' ? 'Mis Citas Agendadas' : 'Citas Agendadas'}
+                    <span class="ml-auto bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">${citas.length} cita${citas.length !== 1 ? 's' : ''}</span>
+                </h3>
+            </div>
+            
+            <div class="divide-y divide-gray-200">
+    `;
+    
+    citas.forEach((cita, index) => {
+        const fechaObj = new Date(cita.fecha + 'T00:00:00');
+        const fechaFormateada = fechaObj.toLocaleDateString('es-CL', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        
+        // Determinar si la cita es hoy, pasada o futura
+        const hoy = new Date().toISOString().split('T')[0];
+        let estadoColor = '';
+        let estadoIcon = '';
+        
+        if (cita.fecha === hoy) {
+            estadoColor = 'bg-green-50 border-l-4 border-l-green-500';
+            estadoIcon = '🟢';
+        } else if (cita.fecha < hoy) {
+            estadoColor = 'bg-gray-50 border-l-4 border-l-gray-400';
+            estadoIcon = '⚫';
+        } else {
+            estadoColor = 'bg-blue-50 border-l-4 border-l-blue-500';
+            estadoIcon = '🔵';
+        }
+        
+        html += `
+            <div class="p-6 hover:bg-gray-50 transition-colors ${estadoColor}">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div class="flex-1">
+                        <!-- Header de la cita -->
+                        <div class="flex items-center mb-3">
+                            <span class="text-2xl mr-3">${estadoIcon}</span>
+                            <div>
+                                <h4 class="text-lg font-bold text-gray-800">${cita.cliente_nombre}</h4>
+                                <p class="text-sm text-gray-500 capitalize">${fechaFormateada}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Detalles -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-clock w-4 mr-2 text-blue-500"></i>
+                                <span class="font-semibold">${cita.hora}</span>
+                            </div>
+                            
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-phone w-4 mr-2 text-green-500"></i>
+                                <span>${cita.cliente_telefono}</span>
+                            </div>
+                            
+                            ${userRole === 'admin' ? `
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-user-tie w-4 mr-2 text-purple-500"></i>
+                                <span>${cita.barbero_nombre}</span>
+                            </div>
+                            ` : ''}
+                            
+                            ${cita.cliente_email ? `
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-envelope w-4 mr-2 text-orange-500"></i>
+                                <span>${cita.cliente_email}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <!-- Notas -->
+                        ${cita.notas ? `
+                        <div class="mt-3 p-3 bg-white rounded-lg border border-gray-200">
+                            <div class="flex items-start">
+                                <i class="fas fa-sticky-note w-4 mr-2 text-yellow-500 mt-0.5"></i>
+                                <span class="text-sm text-gray-700">${cita.notas}</span>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Acciones -->
+                    <div class="mt-4 md:mt-0 md:ml-6 flex space-x-2">
+                        <button onclick="window.open('tel:${cita.cliente_telefono}')" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                            <i class="fas fa-phone mr-1"></i>Llamar
+                        </button>
+                        ${cita.cliente_email ? `
+                        <button onclick="window.open('mailto:${cita.cliente_email}')" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-envelope mr-1"></i>Email
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+            </div>
+            
+            <!-- Footer -->
+            <div class="bg-gray-50 px-6 py-4 text-center">
+                <p class="text-sm text-gray-600">
+                    💡 Las citas se actualizan automáticamente cuando los clientes reservan online
+                </p>
+            </div>
+        </div>
+    `;
+    
+    contenido.innerHTML = html;
+}
+        
+        function mostrarErrorEstadisticas() {
+            const elementos = ['topServicios', 'metodosPago', 'productividadBarberos', 'tendenciaSemanal', 'insightsInteligentes'];
+            elementos.forEach(id => {
+                const elemento = document.getElementById(id);
+                if (elemento) {
+                    elemento.innerHTML = '<div class="text-center py-4 text-red-600">❌ Error al cargar estadísticas</div>';
+                }
+            });
+        }
+        
+// ===============================
+// PESTAÑA: CONFIGURACIÓN
+// ===============================
+function loadConfiguracion() {
+    console.log('⚙️ Cargando configuración...');
+    
+    // Verificar que sea admin
+    if (userRole !== 'admin') {
+        document.getElementById('contentArea').innerHTML = '<div class="text-red-600">❌ Sin permisos de administrador</div>';
+        return;
+    }
+    
+    document.getElementById('contentArea').innerHTML = `
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6">
+                <i class="fas fa-cog mr-2"></i>Configuración de Servicios
+            </h2>
+            <p class="text-gray-600 mb-6">Gestiona los servicios y precios de tu barbería</p>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-bold mb-4">🔧 Próximamente</h3>
+                <p class="text-gray-600">Esta sección permitirá:</p>
+                <ul class="list-disc list-inside mt-2 text-gray-600">
+                    <li>Agregar nuevos servicios</li>
+                    <li>Editar precios</li>
+                    <li>Activar/desactivar servicios</li>
+                </ul>
+            </div>
+        </div>
+    `;
+}
+        // ===============================
+        // LOGOUT
+        // ===============================
+        function logout() {
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('userRole');
+            location.reload();
+        }
+        
+        // ===============================
+        // VERIFICAR SESIÓN AL CARGAR
+        // ===============================
+        window.addEventListener('load', () => {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                userRole = localStorage.getItem('userRole');
+                initializeApp();
+            }
+        });
+    </script>
+</body>
+</html>

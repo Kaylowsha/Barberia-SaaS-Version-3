@@ -1,2 +1,2 @@
-# Barberia-SaaS-Version-3
-version 3
+# barberia-saas
+Sistema de gestión para barberías
