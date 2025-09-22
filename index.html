@@ -284,7 +284,14 @@ if (!barberia.activa) {
             hideLoading();
             return;
         }
-
+ // Crear variables globales dinámicas 
+        window.CURRENT_BARBERIA_DATA = barberia;
+        window.CURRENT_BARBERIA_ID = barberia.id;
+        
+        console.log('🎯 Variables globales establecidas:', {
+            barberia_id: window.CURRENT_BARBERIA_ID,
+            barberia_nombre: window.CURRENT_BARBERIA_DATA.nombre
+        });
         // Login exitoso - Datos dinámicos reales
         const userData = {
             id: usuarios.id,
