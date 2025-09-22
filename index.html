@@ -3939,24 +3939,45 @@ function loadConfiguracion() {
     }
     
     document.getElementById('contentArea').innerHTML = `
-        <div class="max-w-4xl mx-auto">
+        <div class="max-w-6xl mx-auto">
             <h2 class="text-2xl font-bold mb-6">
                 <i class="fas fa-cog mr-2"></i>Configuración de Servicios
             </h2>
             <p class="text-gray-600 mb-6">Gestiona los servicios y precios de tu barbería</p>
             
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-bold mb-4">🔧 Próximamente</h3>
-                <p class="text-gray-600">Esta sección permitirá:</p>
-                <ul class="list-disc list-inside mt-2 text-gray-600">
-                    <li>Agregar nuevos servicios</li>
-                    <li>Editar precios</li>
-                    <li>Activar/desactivar servicios</li>
-                </ul>
+            <!-- Acciones principales -->
+            <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <button onclick="migrarServiciosHardcodeados()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
+                    <i class="fas fa-download mr-2"></i>Importar Servicios Por Defecto
+                </button>
+                
+                <button onclick="alert('Próximamente')" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold">
+                    <i class="fas fa-plus mr-2"></i>Nuevo Servicio
+                </button>
+            </div>
+            
+            <!-- Lista de servicios -->
+            <div class="bg-white rounded-lg shadow-lg">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-800">📋 Servicios Configurados</h3>
+                </div>
+                
+                <div id="listaServiciosConfig">
+                    <div class="text-center py-12">
+                        <i class="fas fa-cogs text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No hay servicios configurados</h3>
+                        <p class="text-gray-500 mb-6">Comienza importando los servicios por defecto</p>
+                        <button onclick="migrarServiciosHardcodeados()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
+                            📥 Importar Servicios Por Defecto
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     `;
 }
+}
+        
         async function migrarServiciosHardcodeados() {
     showLoading();
     
