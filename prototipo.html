@@ -121,38 +121,81 @@
         </div>
     </div>
 
-    <!-- Pantalla 2: Ajustar Monto y Pago -->
-    <div id="pantallaAjuste" class="px-4 py-6 hidden">
+    <!-- Pantalla 2: Servicio Adicional -->
+    <div id="pantallaAdicional" class="px-4 py-6 hidden">
         <div class="bg-white rounded-2xl p-6 shadow-xl">
-            <!-- Servicio seleccionado -->
-            <div class="text-center mb-6">
-                <div class="text-4xl mb-2" id="iconoSeleccionado">💇‍♂️</div>
-                <h2 class="text-xl font-bold text-gray-800" id="servicioSeleccionado">Fade Degradado</h2>
+            <!-- Servicio principal seleccionado -->
+            <div class="bg-blue-50 rounded-xl p-4 mb-6 border-2 border-blue-200">
+                <div class="flex items-center">
+                    <div class="text-3xl mr-3" id="iconoPrincipal">💇‍♂️</div>
+                    <div>
+                        <h3 class="font-bold text-gray-800" id="nombrePrincipal">Fade Degradado</h3>
+                        <p class="text-blue-600 font-semibold" id="precioPrincipal">$18,000</p>
+                    </div>
+                    <div class="ml-auto text-green-600">
+                        <i class="fas fa-check-circle text-2xl"></i>
+                    </div>
+                </div>
             </div>
 
-            <!-- Ajuste de monto -->
+            <!-- Pregunta servicio adicional -->
+            <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">¿Agregar servicio adicional?</h2>
+
+            <!-- Servicios adicionales más comunes -->
+            <div class="grid grid-cols-2 gap-3 mb-4" id="serviciosAdicionales">
+                <!-- Se llenarán dinámicamente -->
+            </div>
+
+            <!-- Botón ver más servicios -->
+            <button onclick="mostrarTodosServiciosAdicionales()" class="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold btn-touch hover:bg-gray-200 mb-4">
+                <i class="fas fa-search mr-2"></i> Ver más servicios
+            </button>
+
+            <!-- Botón No Gracias -->
+            <button onclick="continuarSinAdicional()" class="w-full bg-green-100 text-green-700 py-4 rounded-xl font-bold text-lg btn-touch hover:bg-green-200 border-2 border-green-300">
+                <i class="fas fa-check mr-2"></i> NO GRACIAS, CONTINUAR
+            </button>
+        </div>
+    </div>
+
+    <!-- Pantalla 3: Ajustar Monto y Pago -->
+    <div id="pantallaAjuste" class="px-4 py-6 hidden">
+        <div class="bg-white rounded-2xl p-6 shadow-xl">
+            <!-- Resumen de servicios -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-3">💰 Monto Final</label>
+                <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">💰 Resumen Final</h2>
                 
-                <div class="flex items-center justify-center space-x-3">
-                    <button onclick="ajustarMonto(-2000)" class="bg-red-100 text-red-600 w-12 h-12 rounded-full font-bold text-lg btn-touch hover:bg-red-200">
-                        -2K
-                    </button>
-                    <button onclick="ajustarMonto(-1000)" class="bg-red-100 text-red-600 w-12 h-12 rounded-full font-bold btn-touch hover:bg-red-200">
-                        -1K
-                    </button>
-                    
-                    <div class="bg-blue-50 px-6 py-3 rounded-xl border-2 border-blue-200">
-                        <input type="text" id="montoFinal" class="text-2xl font-bold text-blue-600 bg-transparent text-center w-24 border-none outline-none" 
-                               value="$18,000" readonly onclick="editarMonto()">
+                <!-- Servicio principal -->
+                <div class="bg-blue-50 rounded-xl p-4 mb-3 border-2 border-blue-200">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-3" id="iconoResumenPrincipal">💇‍♂️</span>
+                            <span class="font-semibold" id="nombreResumenPrincipal">Fade Degradado</span>
+                        </div>
+                        <span class="font-bold text-blue-600" id="precioResumenPrincipal">$18,000</span>
                     </div>
-                    
-                    <button onclick="ajustarMonto(1000)" class="bg-green-100 text-green-600 w-12 h-12 rounded-full font-bold btn-touch hover:bg-green-200">
-                        +1K
-                    </button>
-                    <button onclick="ajustarMonto(2000)" class="bg-green-100 text-green-600 w-12 h-12 rounded-full font-bold text-lg btn-touch hover:bg-green-200">
-                        +2K
-                    </button>
+                </div>
+
+                <!-- Servicio adicional (si existe) -->
+                <div id="resumenAdicional" class="bg-green-50 rounded-xl p-4 mb-3 border-2 border-green-200 hidden">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-3" id="iconoResumenAdicional">🧔</span>
+                            <span class="font-semibold" id="nombreResumenAdicional">Barba Premium</span>
+                        </div>
+                        <span class="font-bold text-green-600" id="precioResumenAdicional">$12,000</span>
+                    </div>
+                </div>
+
+                <!-- Total -->
+                <div class="bg-purple-100 rounded-xl p-4 border-2 border-purple-300">
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg font-bold text-purple-800">TOTAL:</span>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-purple-600" id="montoTotal">$18,000</div>
+                            <button onclick="ajustarMontoTotal()" class="text-xs text-purple-600 underline">Ajustar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -160,19 +203,26 @@
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-3">💳 Forma de Pago</label>
                 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-3">
                     <button onclick="seleccionarPago('Efectivo')" 
-                            class="pago-btn bg-green-50 text-green-700 py-4 rounded-xl font-semibold border-2 border-green-200 btn-touch hover:bg-green-100" 
+                            class="pago-btn w-full bg-green-50 text-green-700 py-4 rounded-xl font-semibold border-2 border-green-200 btn-touch hover:bg-green-100" 
                             data-pago="Efectivo">
-                        <i class="fas fa-money-bills text-2xl mb-1"></i>
-                        <br>Efectivo
+                        <i class="fas fa-money-bills text-2xl mr-3"></i>
+                        Efectivo
                     </button>
                     
-                    <button onclick="seleccionarPago('Tarjeta')" 
-                            class="pago-btn bg-blue-50 text-blue-700 py-4 rounded-xl font-semibold border-2 border-blue-200 btn-touch hover:bg-blue-100" 
-                            data-pago="Tarjeta">
-                        <i class="fas fa-credit-card text-2xl mb-1"></i>
-                        <br>Tarjeta
+                    <button onclick="seleccionarPago('Cuenta RUT')" 
+                            class="pago-btn w-full bg-blue-50 text-blue-700 py-4 rounded-xl font-semibold border-2 border-blue-200 btn-touch hover:bg-blue-100" 
+                            data-pago="Cuenta RUT">
+                        <i class="fas fa-credit-card text-2xl mr-3"></i>
+                        Cuenta RUT
+                    </button>
+
+                    <button onclick="seleccionarPago('Mercado Pago')" 
+                            class="pago-btn w-full bg-purple-50 text-purple-700 py-4 rounded-xl font-semibold border-2 border-purple-200 btn-touch hover:bg-purple-100" 
+                            data-pago="Mercado Pago">
+                        <i class="fas fa-mobile-alt text-2xl mr-3"></i>
+                        Mercado Pago
                     </button>
                 </div>
             </div>
@@ -184,15 +234,15 @@
                     <i class="fas fa-rocket mr-2"></i> ¡REGISTRAR YA!
                 </button>
                 
-                <button onclick="volverSeleccion()" 
+                <button onclick="volverASeleccionAdicional()" 
                         class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold btn-touch hover:bg-gray-300">
-                    <i class="fas fa-arrow-left mr-2"></i> Cambiar servicio
+                    <i class="fas fa-arrow-left mr-2"></i> Modificar servicios
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Pantalla 3: Confirmación -->
+    <!-- Pantalla 4: Confirmación -->
     <div id="pantallaConfirmacion" class="px-4 py-6 hidden">
         <div class="bg-white rounded-2xl p-6 shadow-xl text-center">
             <!-- Animación de éxito -->
@@ -205,20 +255,24 @@
                 
                 <div class="space-y-2 text-left">
                     <div class="flex justify-between">
-                        <span class="text-gray-600">Servicio:</span>
-                        <span class="font-semibold" id="resumenServicio">Fade Degradado</span>
+                        <span class="text-gray-600">Servicio Principal:</span>
+                        <span class="font-semibold" id="confirmacionPrincipal">Fade Degradado</span>
+                    </div>
+                    <div class="flex justify-between" id="filaAdicional" style="display: none;">
+                        <span class="text-gray-600">Servicio Adicional:</span>
+                        <span class="font-semibold" id="confirmacionAdicional">Barba Premium</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-600">Monto:</span>
-                        <span class="font-bold text-green-600" id="resumenMonto">$18,000</span>
+                        <span class="text-gray-600">Total:</span>
+                        <span class="font-bold text-green-600" id="confirmacionTotal">$18,000</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Pago:</span>
-                        <span class="font-semibold" id="resumenPago">Efectivo</span>
+                        <span class="font-semibold" id="confirmacionPago">Efectivo</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Hora:</span>
-                        <span class="font-semibold" id="resumenHora">14:23</span>
+                        <span class="font-semibold" id="confirmacionHora">14:23</span>
                     </div>
                 </div>
             </div>
@@ -266,7 +320,8 @@
     <script>
         // Estado de la aplicación
         let servicioActual = null;
-        let montoActual = 0;
+        let servicioAdicional = null;
+        let montoTotal = 0;
         let pagoSeleccionado = 'Efectivo';
         
         // Datos de servicios (simulados - en tu app vendrían de Supabase)
@@ -347,46 +402,95 @@
             servicioActual = serviciosData.find(s => s.id === servicioId);
             if (!servicioActual) return;
             
-            // Actualizar pantalla de ajuste
-            document.getElementById('iconoSeleccionado').textContent = servicioActual.icono;
-            document.getElementById('servicioSeleccionado').textContent = servicioActual.nombre;
-            montoActual = servicioActual.precio;
-            actualizarMonto();
+            // Actualizar pantalla de servicio adicional
+            document.getElementById('iconoPrincipal').textContent = servicioActual.icono;
+            document.getElementById('nombrePrincipal').textContent = servicioActual.nombre;
+            document.getElementById('precioPrincipal').textContent = `${servicioActual.precio.toLocaleString('es-CL')}`;
             
-            // Cambiar a pantalla de ajuste
-            cambiarPantalla('pantallaSeleccion', 'pantallaAjuste');
-        }
-
-        function ajustarMonto(cambio) {
-            montoActual = Math.max(1000, montoActual + cambio);
-            actualizarMonto();
+            // Cargar servicios adicionales (excluyendo el principal)
+            cargarServiciosAdicionales();
             
-            // Feedback visual
-            const montoElement = document.getElementById('montoFinal');
-            montoElement.classList.add('bounce');
-            setTimeout(() => montoElement.classList.remove('bounce'), 600);
+            // Cambiar a pantalla de servicio adicional
+            cambiarPantalla('pantallaSeleccion', 'pantallaAdicional');
         }
 
-        function actualizarMonto() {
-            document.getElementById('montoFinal').value = `$${montoActual.toLocaleString('es-CL')}`;
+        function cargarServiciosAdicionales() {
+            // Servicios populares como adicionales, excluyendo el principal
+            const serviciosDisponibles = serviciosData
+                .filter(s => s.id !== servicioActual.id)
+                .sort((a, b) => b.frecuencia - a.frecuencia)
+                .slice(0, 6);
+            
+            const html = serviciosDisponibles.map(servicio => `
+                <div onclick="seleccionarServicioAdicional(${servicio.id})" 
+                     class="service-card bg-white rounded-xl p-3 shadow-sm hover:shadow-md cursor-pointer border border-gray-200 hover:border-green-300 transition-all">
+                    <div class="text-center">
+                        <div class="text-2xl mb-1">${servicio.icono}</div>
+                        <h3 class="font-semibold text-gray-800 text-xs mb-1">${servicio.nombre}</h3>
+                        <p class="text-sm font-bold text-green-600">+${servicio.precio.toLocaleString('es-CL')}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('serviciosAdicionales').innerHTML = html;
         }
 
-        function editarMonto() {
-            document.getElementById('montoPersonalizado').value = montoActual;
-            document.getElementById('modalMonto').classList.remove('hidden');
+        function seleccionarServicioAdicional(servicioId) {
+            servicioAdicional = serviciosData.find(s => s.id === servicioId);
+            continuarConAdicional();
         }
 
-        function cerrarModalMonto() {
-            document.getElementById('modalMonto').classList.add('hidden');
+        function continuarSinAdicional() {
+            servicioAdicional = null;
+            continuarConAdicional();
         }
 
-        function aplicarMontoPersonalizado() {
-            const nuevoMonto = parseInt(document.getElementById('montoPersonalizado').value);
-            if (nuevoMonto && nuevoMonto >= 1000) {
-                montoActual = nuevoMonto;
-                actualizarMonto();
+        function continuarConAdicional() {
+            // Calcular total
+            montoTotal = servicioActual.precio + (servicioAdicional ? servicioAdicional.precio : 0);
+            
+            // Actualizar pantalla de resumen
+            actualizarResumenFinal();
+            
+            // Cambiar a pantalla de ajuste/pago
+            cambiarPantalla('pantallaAdicional', 'pantallaAjuste');
+        }
+
+        function actualizarResumenFinal() {
+            // Servicio principal
+            document.getElementById('iconoResumenPrincipal').textContent = servicioActual.icono;
+            document.getElementById('nombreResumenPrincipal').textContent = servicioActual.nombre;
+            document.getElementById('precioResumenPrincipal').textContent = `${servicioActual.precio.toLocaleString('es-CL')}`;
+            
+            // Servicio adicional
+            const resumenAdicional = document.getElementById('resumenAdicional');
+            if (servicioAdicional) {
+                document.getElementById('iconoResumenAdicional').textContent = servicioAdicional.icono;
+                document.getElementById('nombreResumenAdicional').textContent = servicioAdicional.nombre;
+                document.getElementById('precioResumenAdicional').textContent = `${servicioAdicional.precio.toLocaleString('es-CL')}`;
+                resumenAdicional.classList.remove('hidden');
+            } else {
+                resumenAdicional.classList.add('hidden');
             }
-            cerrarModalMonto();
+            
+            // Total
+            document.getElementById('montoTotal').textContent = `${montoTotal.toLocaleString('es-CL')}`;
+        }
+
+        function ajustarMontoTotal() {
+            const nuevoMonto = prompt('Ingresa el monto total:', montoTotal);
+            if (nuevoMonto && !isNaN(nuevoMonto) && parseFloat(nuevoMonto) > 0) {
+                montoTotal = parseFloat(nuevoMonto);
+                document.getElementById('montoTotal').textContent = `${montoTotal.toLocaleString('es-CL')}`;
+            }
+        }
+
+        function mostrarTodosServiciosAdicionales() {
+            alert('Aquí se mostrarían todos los servicios para adicional\n(Modal con lista completa)');
+        }
+
+        function volverASeleccionAdicional() {
+            cambiarPantalla('pantallaAjuste', 'pantallaAdicional');
         }
 
         function seleccionarPago(tipoPago) {
@@ -394,9 +498,9 @@
             
             // Actualizar estilos de botones
             document.querySelectorAll('.pago-btn').forEach(btn => {
-                btn.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-100');
+                btn.classList.remove('ring-2', 'ring-blue-400');
                 if (btn.dataset.pago === tipoPago) {
-                    btn.classList.add('ring-2', 'ring-blue-400', 'bg-blue-100');
+                    btn.classList.add('ring-2', 'ring-blue-400');
                 }
             });
         }
@@ -414,15 +518,25 @@
             localStorage.setItem('ultimoServicio', JSON.stringify({
                 id: servicioActual.id,
                 nombre: servicioActual.nombre,
-                precio: montoActual
+                precio: servicioActual.precio
             }));
             
             // Actualizar pantalla de confirmación
             document.getElementById('codigoGenerado').textContent = codigo;
-            document.getElementById('resumenServicio').textContent = servicioActual.nombre;
-            document.getElementById('resumenMonto').textContent = `$${montoActual.toLocaleString('es-CL')}`;
-            document.getElementById('resumenPago').textContent = pagoSeleccionado;
-            document.getElementById('resumenHora').textContent = document.getElementById('horaActual').textContent;
+            document.getElementById('confirmacionPrincipal').textContent = servicioActual.nombre;
+            
+            // Mostrar servicio adicional si existe
+            const filaAdicional = document.getElementById('filaAdicional');
+            if (servicioAdicional) {
+                document.getElementById('confirmacionAdicional').textContent = servicioAdicional.nombre;
+                filaAdicional.style.display = 'flex';
+            } else {
+                filaAdicional.style.display = 'none';
+            }
+            
+            document.getElementById('confirmacionTotal').textContent = `${montoTotal.toLocaleString('es-CL')}`;
+            document.getElementById('confirmacionPago').textContent = pagoSeleccionado;
+            document.getElementById('confirmacionHora').textContent = document.getElementById('horaActual').textContent;
             
             // Cambiar a pantalla de confirmación
             cambiarPantalla('pantallaAjuste', 'pantallaConfirmacion');
@@ -444,20 +558,21 @@
         }
 
         function volverSeleccion() {
-            cambiarPantalla('pantallaAjuste', 'pantallaSeleccion');
+            cambiarPantalla('pantallaAdicional', 'pantallaSeleccion');
         }
 
         function nuevoServicio() {
             // Reset del estado
             servicioActual = null;
-            montoActual = 0;
+            servicioAdicional = null;
+            montoTotal = 0;
             pagoSeleccionado = 'Efectivo';
             
             // Resetear botones de pago
             document.querySelectorAll('.pago-btn').forEach(btn => {
-                btn.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-100');
+                btn.classList.remove('ring-2', 'ring-blue-400');
             });
-            document.querySelector('[data-pago="Efectivo"]').classList.add('ring-2', 'ring-blue-400', 'bg-blue-100');
+            document.querySelector('[data-pago="Efectivo"]').classList.add('ring-2', 'ring-blue-400');
             
             // Actualizar último servicio
             verificarUltimoServicio();
@@ -470,6 +585,8 @@
             if (ultimo) {
                 const data = JSON.parse(ultimo);
                 seleccionarServicio(data.id);
+            }
+        }seleccionarServicio(data.id);
                 montoActual = data.precio;
                 actualizarMonto();
             }
