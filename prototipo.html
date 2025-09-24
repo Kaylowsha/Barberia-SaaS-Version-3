@@ -174,14 +174,44 @@
                     </div>
                 </div>
 
-                <!-- Total -->
+                <!-- Total con ajustes rápidos -->
                 <div class="bg-purple-100 rounded-xl p-4 border-2 border-purple-300">
-                    <div class="flex justify-between items-center">
-                        <span class="text-lg font-bold text-purple-800">TOTAL:</span>
-                        <div class="text-right">
-                            <div class="text-2xl font-bold text-purple-600" id="montoTotal">$18,000</div>
-                            <button onclick="ajustarMontoTotal()" class="text-xs text-purple-600 underline">Ajustar</button>
+                    <div class="text-center mb-3">
+                        <span class="text-lg font-bold text-purple-800">TOTAL FINAL:</span>
+                    </div>
+                    
+                    <!-- Botones de ajuste rápido -->
+                    <div class="flex items-center justify-center space-x-2 mb-3">
+                        <button onclick="ajustarMonto(-2000)" class="bg-red-100 text-red-600 w-10 h-10 rounded-full font-bold text-sm btn-touch hover:bg-red-200">
+                            -2K
+                        </button>
+                        <button onclick="ajustarMonto(-1000)" class="bg-red-100 text-red-600 w-10 h-10 rounded-full font-bold text-sm btn-touch hover:bg-red-200">
+                            -1K
+                        </button>
+                        <button onclick="ajustarMonto(-500)" class="bg-red-100 text-red-600 w-10 h-10 rounded-full font-bold text-xs btn-touch hover:bg-red-200">
+                            -500
+                        </button>
+                        
+                        <div class="bg-white px-4 py-2 rounded-xl border-2 border-purple-300 mx-2">
+                            <div class="text-2xl font-bold text-purple-600 text-center" id="montoTotal">$18,000</div>
                         </div>
+                        
+                        <button onclick="ajustarMonto(500)" class="bg-green-100 text-green-600 w-10 h-10 rounded-full font-bold text-xs btn-touch hover:bg-green-200">
+                            +500
+                        </button>
+                        <button onclick="ajustarMonto(1000)" class="bg-green-100 text-green-600 w-10 h-10 rounded-full font-bold text-sm btn-touch hover:bg-green-200">
+                            +1K
+                        </button>
+                        <button onclick="ajustarMonto(2000)" class="bg-green-100 text-green-600 w-10 h-10 rounded-full font-bold text-sm btn-touch hover:bg-green-200">
+                            +2K
+                        </button>
+                    </div>
+                    
+                    <!-- Botón editar personalizado -->
+                    <div class="text-center">
+                        <button onclick="ajustarMontoTotal()" class="text-xs text-purple-600 underline">
+                            ✏️ Editar monto personalizado
+                        </button>
                     </div>
                 </div>
             </div>
@@ -420,6 +450,48 @@
             }
             
             document.getElementById('montoTotal').textContent = `$${montoTotal.toLocaleString('es-CL')}`;
+        }
+
+        function ajustarMonto(cambio) {
+            // Calcular nuevo total
+            const nuevoTotal = montoTotal + cambio;
+            
+            // Validar que no sea negativo o muy bajo
+            if (nuevoTotal < 1000) {
+                alert('El monto no puede ser menor a $1.000');
+                return;
+            }
+            
+            // Actualizar total
+            montoTotal = nuevoTotal;
+            document.getElementById('montoTotal').textContent = `${montoTotal.toLocaleString('es-CL')}`;
+            
+            // Feedback visual
+            const montoElement = document.getElementById('montoTotal');
+            montoElement.classList.add('bounce');
+            setTimeout(() => montoElement.classList.remove('bounce'), 600);
+            
+            // Mostrar el cambio aplicado brevemente
+            mostrarCambioAplicado(cambio);
+        }
+        
+        function mostrarCambioAplicado(cambio) {
+            const signo = cambio > 0 ? '+' : '';
+            const mensaje = `${signo}${cambio.toLocaleString('es-CL')}`;
+            
+            // Crear elemento temporal para mostrar el cambio
+            const cambioElement = document.createElement('div');
+            cambioElement.textContent = mensaje;
+            cambioElement.className = `fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
+                                     ${cambio > 0 ? 'bg-green-500' : 'bg-red-500'} text-white px-4 py-2 rounded-full 
+                                     font-bold text-lg z-50 bounce`;
+            
+            document.body.appendChild(cambioElement);
+            
+            // Remover después de 1 segundo
+            setTimeout(() => {
+                cambioElement.remove();
+            }, 1000);
         }
 
         function ajustarMontoTotal() {
