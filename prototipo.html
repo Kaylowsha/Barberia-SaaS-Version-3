@@ -176,33 +176,29 @@
 
                 <!-- Total con ajustes rápidos -->
                 <div class="bg-purple-100 rounded-xl p-4 border-2 border-purple-300">
-                    <div class="text-center mb-3">
-                        <span class="text-lg font-bold text-purple-800">TOTAL FINAL:</span>
+                    <div class="text-center mb-4">
+                        <div class="text-lg font-bold text-purple-800 mb-2">TOTAL FINAL:</div>
+                        <div class="text-3xl font-bold text-purple-600" id="montoTotal">$18,000</div>
                     </div>
                     
-                    <!-- Botones de ajuste rápido -->
+                    <!-- Botones de ajuste rápido DEBAJO -->
                     <div class="flex items-center justify-center space-x-2 mb-3">
-                        <button onclick="ajustarMonto(-2000)" class="bg-red-100 text-red-600 w-10 h-10 rounded-full font-bold text-sm btn-touch hover:bg-red-200">
+                        <button onclick="ajustarMonto(-2000)" class="bg-red-100 text-red-600 w-12 h-10 rounded-lg font-bold text-sm btn-touch hover:bg-red-200">
                             -2K
                         </button>
-                        <button onclick="ajustarMonto(-1000)" class="bg-red-100 text-red-600 w-10 h-10 rounded-full font-bold text-sm btn-touch hover:bg-red-200">
+                        <button onclick="ajustarMonto(-1000)" class="bg-red-100 text-red-600 w-12 h-10 rounded-lg font-bold text-sm btn-touch hover:bg-red-200">
                             -1K
                         </button>
-                        <button onclick="ajustarMonto(-500)" class="bg-red-100 text-red-600 w-10 h-10 rounded-full font-bold text-xs btn-touch hover:bg-red-200">
+                        <button onclick="ajustarMonto(-500)" class="bg-red-100 text-red-600 w-12 h-10 rounded-lg font-bold text-xs btn-touch hover:bg-red-200">
                             -500
                         </button>
-                        
-                        <div class="bg-white px-4 py-2 rounded-xl border-2 border-purple-300 mx-2">
-                            <div class="text-2xl font-bold text-purple-600 text-center" id="montoTotal">$18,000</div>
-                        </div>
-                        
-                        <button onclick="ajustarMonto(500)" class="bg-green-100 text-green-600 w-10 h-10 rounded-full font-bold text-xs btn-touch hover:bg-green-200">
+                        <button onclick="ajustarMonto(500)" class="bg-green-100 text-green-600 w-12 h-10 rounded-lg font-bold text-xs btn-touch hover:bg-green-200">
                             +500
                         </button>
-                        <button onclick="ajustarMonto(1000)" class="bg-green-100 text-green-600 w-10 h-10 rounded-full font-bold text-sm btn-touch hover:bg-green-200">
+                        <button onclick="ajustarMonto(1000)" class="bg-green-100 text-green-600 w-12 h-10 rounded-lg font-bold text-sm btn-touch hover:bg-green-200">
                             +1K
                         </button>
-                        <button onclick="ajustarMonto(2000)" class="bg-green-100 text-green-600 w-10 h-10 rounded-full font-bold text-sm btn-touch hover:bg-green-200">
+                        <button onclick="ajustarMonto(2000)" class="bg-green-100 text-green-600 w-12 h-10 rounded-lg font-bold text-sm btn-touch hover:bg-green-200">
                             +2K
                         </button>
                     </div>
