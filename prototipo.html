@@ -79,7 +79,7 @@
                 <span class="text-2xl mr-2">🔥</span> Lo que más haces
             </h2>
             
-            <div class="grid grid-cols-2 gap-4 mb-4" id="serviciosFrecuentes">
+            <div class="grid grid-cols-3 gap-2 mb-4" id="serviciosFrecuentes">
                 <!-- Se llenarán dinámicamente -->
             </div>
         </div>
@@ -381,7 +381,7 @@ function mostrarTodosLosServicios(servicios) {
     // Mostrar todos en grid 2x4 (botones grandes)
     const todosHtml = servicios.map(servicio => `
         <div onclick="seleccionarServicio(${servicio.id})" 
-             class="service-card bg-white rounded-2xl p-4 shadow-md hover:shadow-lg cursor-pointer border-2 border-transparent hover:border-blue-300 transition-all">
+             class="service-card bg-white rounded-xl p-2 shadow-md min-h-[85px] hover:shadow-lg cursor-pointer border-2 border-transparent hover:border-blue-300 transition-all">
             <div class="text-center">
                 <div class="text-3xl mb-2">${servicio.icono}</div>
                 <h3 class="font-bold text-gray-800 text-sm mb-1">${servicio.nombre}</h3>
@@ -417,8 +417,8 @@ function mostrarServiciosPrincipales(principales, restantes) {
         <div onclick="seleccionarServicio(${servicio.id})" 
              class="service-card bg-white rounded-2xl p-4 shadow-md hover:shadow-lg cursor-pointer border-2 border-transparent hover:border-blue-300 transition-all">
             <div class="text-center">
-                <div class="text-3xl mb-2">${servicio.icono}</div>
-                <h3 class="font-bold text-gray-800 text-sm mb-1">${servicio.nombre}</h3>
+                <div class="text-lg mb-1">${servicio.icono}</div>
+                <h3 class="font-bold text-gray-800 text-xs mb-1 leading-tight">${servicio.nombre}</h3>
                 <p class="text-precio font-bold text-blue-600">$${servicio.precio.toLocaleString('es-CL')}</p>
             </div>
         </div>
@@ -562,7 +562,8 @@ function testGridDinamico() {
     console.log(`🧪 TEST: Ahora tenemos ${serviciosData.length} servicios`);
     cargarServicios();
 }
-
+// Activar test de 12 servicios al cargar
+testGridDinamico();
         function verificarUltimoServicio() {
             const ultimo = localStorage.getItem('ultimoServicio');
             if (ultimo) {
