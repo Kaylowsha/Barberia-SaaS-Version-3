@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Animaciones personalizadas */
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
@@ -28,7 +27,6 @@
         .slide-out { animation: slideOut 0.3s ease-out; }
         .bounce { animation: bounce 0.6s; }
         
-        /* Cards con efecto tap */
         .service-card {
             transition: all 0.2s ease;
             transform: scale(1);
@@ -39,7 +37,6 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
         
-        /* Botones grandes con feedback visual */
         .btn-touch {
             min-height: 60px;
             transition: all 0.2s ease;
@@ -49,16 +46,6 @@
             transform: scale(0.98);
         }
         
-        /* Efectos de vibración */
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-        
-        .shake { animation: shake 0.5s ease-in-out; }
-        
-        /* Responsive específico para móvil */
         @media (max-width: 640px) {
             .service-card {
                 min-height: 120px;
@@ -158,7 +145,7 @@
         </div>
     </div>
 
-    <!-- Pantalla 3: Ajustar Monto y Pago -->
+    <!-- Pantalla 3: Resumen y Pago -->
     <div id="pantallaAjuste" class="px-4 py-6 hidden">
         <div class="bg-white rounded-2xl p-6 shadow-xl">
             <!-- Resumen de servicios -->
@@ -292,31 +279,6 @@
         </div>
     </div>
 
-    <!-- Modal: Editar Monto Personalizado -->
-    <div id="modalMonto" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl p-6 m-4 max-w-sm w-full">
-            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">💰 Monto Personalizado</h3>
-            
-            <div class="mb-4">
-                <input type="number" id="montoPersonalizado" 
-                       class="w-full text-center text-2xl font-bold border-2 border-blue-300 rounded-xl py-3 px-4"
-                       placeholder="15000" min="1000" max="100000">
-            </div>
-            
-            <div class="flex space-x-3">
-                <button onclick="cerrarModalMonto()" 
-                        class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold btn-touch">
-                    Cancelar
-                </button>
-                <button onclick="aplicarMontoPersonalizado()" 
-                        class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold btn-touch">
-                    Aplicar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Script principal -->
     <script>
         // Estado de la aplicación
         let servicioActual = null;
@@ -324,7 +286,7 @@
         let montoTotal = 0;
         let pagoSeleccionado = 'Efectivo';
         
-        // Datos de servicios (simulados - en tu app vendrían de Supabase)
+        // Datos de servicios
         const serviciosData = [
             { id: 1, nombre: 'Fade Degradado', icono: '💇‍♂️', precio: 18000, frecuencia: 95 },
             { id: 2, nombre: 'Barba Premium', icono: '🧔', precio: 12000, frecuencia: 80 },
@@ -336,10 +298,10 @@
             { id: 8, nombre: 'Diseños', icono: '🎨', precio: 8000, frecuencia: 25 }
         ];
 
-        // Inicializar la aplicación
+        // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
             actualizarHora();
-            setInterval(actualizarHora, 60000); // Actualizar cada minuto
+            setInterval(actualizarHora, 60000);
             cargarServicios();
             verificarUltimoServicio();
         });
@@ -354,10 +316,8 @@
         }
 
         function cargarServicios() {
-            // Ordenar por frecuencia (simulada)
             const serviciosOrdenados = [...serviciosData].sort((a, b) => b.frecuencia - a.frecuencia);
             
-            // Servicios más frecuentes (top 4)
             const frecuentes = serviciosOrdenados.slice(0, 4);
             const frecuentesHtml = frecuentes.map(servicio => `
                 <div onclick="seleccionarServicio(${servicio.id})" 
@@ -372,7 +332,6 @@
             
             document.getElementById('serviciosFrecuentes').innerHTML = frecuentesHtml;
             
-            // Otros servicios (siguientes 4)
             const otros = serviciosOrdenados.slice(4, 8);
             const otrosHtml = otros.map(servicio => `
                 <div onclick="seleccionarServicio(${servicio.id})" 
@@ -389,7 +348,6 @@
         }
 
         function verificarUltimoServicio() {
-            // Simulación de último servicio (en tu app sería de localStorage o BD)
             const ultimo = localStorage.getItem('ultimoServicio');
             if (ultimo) {
                 const data = JSON.parse(ultimo);
@@ -402,20 +360,15 @@
             servicioActual = serviciosData.find(s => s.id === servicioId);
             if (!servicioActual) return;
             
-            // Actualizar pantalla de servicio adicional
             document.getElementById('iconoPrincipal').textContent = servicioActual.icono;
             document.getElementById('nombrePrincipal').textContent = servicioActual.nombre;
-            document.getElementById('precioPrincipal').textContent = `${servicioActual.precio.toLocaleString('es-CL')}`;
+            document.getElementById('precioPrincipal').textContent = `$${servicioActual.precio.toLocaleString('es-CL')}`;
             
-            // Cargar servicios adicionales (excluyendo el principal)
             cargarServiciosAdicionales();
-            
-            // Cambiar a pantalla de servicio adicional
             cambiarPantalla('pantallaSeleccion', 'pantallaAdicional');
         }
 
         function cargarServiciosAdicionales() {
-            // Servicios populares como adicionales, excluyendo el principal
             const serviciosDisponibles = serviciosData
                 .filter(s => s.id !== servicioActual.id)
                 .sort((a, b) => b.frecuencia - a.frecuencia)
@@ -427,7 +380,7 @@
                     <div class="text-center">
                         <div class="text-2xl mb-1">${servicio.icono}</div>
                         <h3 class="font-semibold text-gray-800 text-xs mb-1">${servicio.nombre}</h3>
-                        <p class="text-sm font-bold text-green-600">+${servicio.precio.toLocaleString('es-CL')}</p>
+                        <p class="text-sm font-bold text-green-600">+$${servicio.precio.toLocaleString('es-CL')}</p>
                     </div>
                 </div>
             `).join('');
@@ -446,47 +399,39 @@
         }
 
         function continuarConAdicional() {
-            // Calcular total
             montoTotal = servicioActual.precio + (servicioAdicional ? servicioAdicional.precio : 0);
-            
-            // Actualizar pantalla de resumen
             actualizarResumenFinal();
-            
-            // Cambiar a pantalla de ajuste/pago
             cambiarPantalla('pantallaAdicional', 'pantallaAjuste');
         }
 
         function actualizarResumenFinal() {
-            // Servicio principal
             document.getElementById('iconoResumenPrincipal').textContent = servicioActual.icono;
             document.getElementById('nombreResumenPrincipal').textContent = servicioActual.nombre;
-            document.getElementById('precioResumenPrincipal').textContent = `${servicioActual.precio.toLocaleString('es-CL')}`;
+            document.getElementById('precioResumenPrincipal').textContent = `$${servicioActual.precio.toLocaleString('es-CL')}`;
             
-            // Servicio adicional
             const resumenAdicional = document.getElementById('resumenAdicional');
             if (servicioAdicional) {
                 document.getElementById('iconoResumenAdicional').textContent = servicioAdicional.icono;
                 document.getElementById('nombreResumenAdicional').textContent = servicioAdicional.nombre;
-                document.getElementById('precioResumenAdicional').textContent = `${servicioAdicional.precio.toLocaleString('es-CL')}`;
+                document.getElementById('precioResumenAdicional').textContent = `$${servicioAdicional.precio.toLocaleString('es-CL')}`;
                 resumenAdicional.classList.remove('hidden');
             } else {
                 resumenAdicional.classList.add('hidden');
             }
             
-            // Total
-            document.getElementById('montoTotal').textContent = `${montoTotal.toLocaleString('es-CL')}`;
+            document.getElementById('montoTotal').textContent = `$${montoTotal.toLocaleString('es-CL')}`;
         }
 
         function ajustarMontoTotal() {
             const nuevoMonto = prompt('Ingresa el monto total:', montoTotal);
             if (nuevoMonto && !isNaN(nuevoMonto) && parseFloat(nuevoMonto) > 0) {
                 montoTotal = parseFloat(nuevoMonto);
-                document.getElementById('montoTotal').textContent = `${montoTotal.toLocaleString('es-CL')}`;
+                document.getElementById('montoTotal').textContent = `$${montoTotal.toLocaleString('es-CL')}`;
             }
         }
 
         function mostrarTodosServiciosAdicionales() {
-            alert('Aquí se mostrarían todos los servicios para adicional\n(Modal con lista completa)');
+            alert('Modal con todos los servicios adicionales');
         }
 
         function volverASeleccionAdicional() {
@@ -496,7 +441,6 @@
         function seleccionarPago(tipoPago) {
             pagoSeleccionado = tipoPago;
             
-            // Actualizar estilos de botones
             document.querySelectorAll('.pago-btn').forEach(btn => {
                 btn.classList.remove('ring-2', 'ring-blue-400');
                 if (btn.dataset.pago === tipoPago) {
@@ -511,21 +455,17 @@
                 return;
             }
 
-            // Simulación de registro (en tu app sería llamada a Supabase)
-            const codigo = Math.floor(Math.random() * 900) + 100; // Código simulado
+            const codigo = Math.floor(Math.random() * 900) + 100;
             
-            // Guardar último servicio
             localStorage.setItem('ultimoServicio', JSON.stringify({
                 id: servicioActual.id,
                 nombre: servicioActual.nombre,
                 precio: servicioActual.precio
             }));
             
-            // Actualizar pantalla de confirmación
             document.getElementById('codigoGenerado').textContent = codigo;
             document.getElementById('confirmacionPrincipal').textContent = servicioActual.nombre;
             
-            // Mostrar servicio adicional si existe
             const filaAdicional = document.getElementById('filaAdicional');
             if (servicioAdicional) {
                 document.getElementById('confirmacionAdicional').textContent = servicioAdicional.nombre;
@@ -534,11 +474,10 @@
                 filaAdicional.style.display = 'none';
             }
             
-            document.getElementById('confirmacionTotal').textContent = `${montoTotal.toLocaleString('es-CL')}`;
+            document.getElementById('confirmacionTotal').textContent = `$${montoTotal.toLocaleString('es-CL')}`;
             document.getElementById('confirmacionPago').textContent = pagoSeleccionado;
             document.getElementById('confirmacionHora').textContent = document.getElementById('horaActual').textContent;
             
-            // Cambiar a pantalla de confirmación
             cambiarPantalla('pantallaAjuste', 'pantallaConfirmacion');
         }
 
@@ -562,21 +501,17 @@
         }
 
         function nuevoServicio() {
-            // Reset del estado
             servicioActual = null;
             servicioAdicional = null;
             montoTotal = 0;
             pagoSeleccionado = 'Efectivo';
             
-            // Resetear botones de pago
             document.querySelectorAll('.pago-btn').forEach(btn => {
                 btn.classList.remove('ring-2', 'ring-blue-400');
             });
             document.querySelector('[data-pago="Efectivo"]').classList.add('ring-2', 'ring-blue-400');
             
-            // Actualizar último servicio
             verificarUltimoServicio();
-            
             cambiarPantalla('pantallaConfirmacion', 'pantallaSeleccion');
         }
 
@@ -589,21 +524,14 @@
         }
 
         function mostrarTodosServicios() {
-            // En tu implementación real, esto abriría un modal o nueva pantalla
-            // con todos los servicios disponibles
-            alert('Aquí se mostrarían todos los servicios disponibles\n(Por implementar en la versión real)');
+            alert('Modal con todos los servicios disponibles');
         }
 
         function volverInicio() {
-            // En tu implementación real, esto volvería al sistema principal
-            alert('Volviendo al sistema principal...\n(Integración con tu index.html)');
-        }seleccionarServicio(data.id);
-                montoActual = data.precio;
-                actualizarMonto();
-            }
+            alert('Volviendo al sistema principal');
         }
 
-        // Efectos adicionales para mejorar la experiencia táctil
+        // Efectos táctiles
         document.addEventListener('touchstart', function(e) {
             if (e.target.classList.contains('service-card') || e.target.classList.contains('btn-touch')) {
                 e.target.style.transform = 'scale(0.95)';
