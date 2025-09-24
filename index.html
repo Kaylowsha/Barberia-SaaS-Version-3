@@ -579,30 +579,114 @@ function calcularDiasRestantes(fechaHasta) {
             document.getElementById('registroForm').addEventListener('submit', registrarServicio);
         }
         
-        async function loadServiciosDropdown() {
-            // Temporalmente usar servicios hardcodeados
-            const servicios = [
-                { id: 1, nombre: 'Corte Tradicional - Estudiante', precio_sugerido: 12000 },
-                { id: 2, nombre: 'Corte Tijera', precio_sugerido: 15000 },
-                { id: 3, nombre: 'Fade - Degradados', precio_sugerido: 18000 },
-                { id: 4, nombre: 'Barba Rasurado', precio_sugerido: 8000 },
-                { id: 5, nombre: 'Perfilado Barba', precio_sugerido: 10000 },
-                { id: 6, nombre: 'Barba Premium', precio_sugerido: 12000 },
-                { id: 7, nombre: 'Rasurado de Barba con Vapor', precio_sugerido: 15000 },
-                { id: 8, nombre: 'Limpieza Facial Premium', precio_sugerido: 20000 },
-                { id: 9, nombre: 'Servicio Full', precio_sugerido: 35000 },
-                { id: 10, nombre: 'Cejas', precio_sugerido: 5000 },
-                { id: 11, nombre: 'Diseños', precio_sugerido: 8000 },
-                { id: 12, nombre: 'Líneas', precio_sugerido: 5000 }
-            ];
-            
-            const options = servicios.map(s => 
-                `<option value="${s.id}" data-precio="${s.precio_sugerido}">${s.nombre}</option>`
-            ).join('');
-            
-            document.getElementById('servicioPrincipal').innerHTML += options;
-            document.getElementById('servicioAdicional').innerHTML += options;
+      async function loadServiciosDropdown() {
+    try {
+        console.log('🔍 Cargando servicios DESDE BD para dropdown...');
+        
+        // Cargar servicios activos desde la base de datos
+        const { data: servicios, error } = await supabase
+            .from('services')
+            .select('id, nombre, precio_sugerido')
+            .eq('barberia_id', window.CURRENT_BARBERIA_ID)
+            .eq('activo', true)  // ✅ Solo servicios activos
+            .order('orden', { ascending: true });
+        
+        if (error) {
+            console.error('❌ Error cargando servicios:', error);
+            // Fallback a servicios hardcodeados si hay error
+            console.log('🔄 Usando servicios hardcodeados como fallback...');
+            usarServiciosHardcodeados();
+            return;
         }
+        
+        if (!servicios || servicios.length === 0) {
+            console.log('⚠️ No hay servicios activos, usando hardcodeados...');
+            usarServiciosHardcodeados();
+            return;
+        }
+        
+        console.log(`✅ ${servicios.length} servicios activos cargados desde BD`);
+        
+        // Generar opciones dinámicamente desde BD
+        const options = servicios.map(s => 
+            `<option value="${s.id}" data-precio="${s.precio_sugerido}">${s.nombre}</option>`
+        ).join('');
+        
+        // Insertar en ambos dropdowns
+        const dropdownPrincipal = document.getElementById('servicioPrincipal');
+        const dropdownAdicional = document.getElementById('servicioAdicional');
+        
+        if (dropdownPrincipal) {
+            dropdownPrincipal.innerHTML = '<option value="">Selecciona un servicio...</option>' + options;
+        }
+        
+        if (dropdownAdicional) {
+            dropdownAdicional.innerHTML = '<option value="">Ninguno</option>' + options;
+        }
+        
+        // Agregar evento para autocompletar precio (funcionalidad existente)
+        agregarEventoAutocompletarPrecio();
+        
+    } catch (error) {
+        console.error('❌ Error crítico cargando servicios:', error);
+        usarServiciosHardcodeados();
+    }
+}
+
+// Función auxiliar: fallback a servicios hardcodeados
+function usarServiciosHardcodeados() {
+    console.log('📋 Cargando servicios hardcodeados como respaldo...');
+    
+    const serviciosHardcodeados = [
+        { id: 1, nombre: 'Corte Tradicional - Estudiante', precio_sugerido: 12000 },
+        { id: 2, nombre: 'Corte Tijera', precio_sugerido: 15000 },
+        { id: 3, nombre: 'Fade - Degradados', precio_sugerido: 18000 },
+        { id: 4, nombre: 'Barba Rasurado', precio_sugerido: 8000 },
+        { id: 5, nombre: 'Perfilado Barba', precio_sugerido: 10000 },
+        { id: 6, nombre: 'Barba Premium', precio_sugerido: 12000 },
+        { id: 7, nombre: 'Rasurado de Barba con Vapor', precio_sugerido: 15000 },
+        { id: 8, nombre: 'Limpieza Facial Premium', precio_sugerido: 20000 },
+        { id: 9, nombre: 'Servicio Full', precio_sugerido: 35000 },
+        { id: 10, nombre: 'Cejas', precio_sugerido: 5000 },
+        { id: 11, nombre: 'Diseños', precio_sugerido: 8000 },
+        { id: 12, nombre: 'Líneas', precio_sugerido: 5000 }
+    ];
+    
+    const options = serviciosHardcodeados.map(s => 
+        `<option value="${s.id}" data-precio="${s.precio_sugerido}">${s.nombre}</option>`
+    ).join('');
+    
+    const dropdownPrincipal = document.getElementById('servicioPrincipal');
+    const dropdownAdicional = document.getElementById('servicioAdicional');
+    
+    if (dropdownPrincipal) {
+        dropdownPrincipal.innerHTML = '<option value="">Selecciona un servicio...</option>' + options;
+    }
+    
+    if (dropdownAdicional) {
+        dropdownAdicional.innerHTML = '<option value="">Ninguno</option>' + options;
+    }
+    
+    agregarEventoAutocompletarPrecio();
+}
+
+// Función auxiliar: agregar funcionalidad de autocompletar precio
+function agregarEventoAutocompletarPrecio() {
+    const dropdownPrincipal = document.getElementById('servicioPrincipal');
+    const inputMonto = document.getElementById('monto');
+    
+    if (dropdownPrincipal && inputMonto) {
+        dropdownPrincipal.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const precio = selectedOption.getAttribute('data-precio');
+            
+            if (precio && !inputMonto.value) {
+                inputMonto.value = precio;
+                console.log('💰 Precio sugerido aplicado:', precio);
+            }
+        });
+    }
+}
         
         async function registrarServicio(e) {
             e.preventDefault();
