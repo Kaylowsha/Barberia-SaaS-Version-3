@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Express - Móvil</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Animaciones personalizadas */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(-100%); opacity: 0; }
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        .slide-out { animation: slideOut 0.3s ease-out; }
+        .bounce { animation: bounce 0.6s; }
+        
+        /* Cards con efecto tap */
+        .service-card {
+            transition: all 0.2s ease;
+            transform: scale(1);
+        }
+        
+        .service-card:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        /* Botones grandes con feedback visual */
+        .btn-touch {
+            min-height: 60px;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-touch:active {
+            transform: scale(0.98);
+        }
+        
+        /* Efectos de vibración */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .shake { animation: shake 0.5s ease-in-out; }
+        
+        /* Responsive específico para móvil */
+        @media (max-width: 640px) {
+            .service-card {
+                min-height: 120px;
+            }
+            
+            .text-precio {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header fijo -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="px-4 py-3">
+            <div class="flex items-center justify-between">
+                <button onclick="volverInicio()" class="text-blue-600 hover:text-blue-800">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <h1 class="text-lg font-bold text-gray-800">⚡ Registro Express</h1>
+                <div class="text-sm text-gray-600" id="horaActual">14:23</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Pantalla 1: Selección de Servicio -->
+    <div id="pantallaSeleccion" class="px-4 py-6 slide-in">
+        <!-- Servicios Frecuentes -->
+        <div class="mb-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                <span class="text-2xl mr-2">🔥</span> Lo que más haces
+            </h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4" id="serviciosFrecuentes">
+                <!-- Se llenarán dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Otros Servicios Populares -->
+        <div class="mb-6">
+            <h3 class="text-md font-semibold text-gray-700 mb-3 flex items-center">
+                <span class="text-xl mr-2">⭐</span> Otros populares
+            </h3>
+            
+            <div class="grid grid-cols-2 gap-3" id="otrosServicios">
+                <!-- Se llenarán dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Botón Ver Todos -->
+        <button onclick="mostrarTodosServicios()" class="w-full bg-gray-100 text-gray-700 py-4 rounded-xl font-semibold btn-touch hover:bg-gray-200">
+            <i class="fas fa-search mr-2"></i> Ver todos los servicios
+        </button>
+
+        <!-- Shortcut: Repetir último -->
+        <div id="ultimoServicio" class="mt-4 hidden">
+            <button onclick="repetirUltimo()" class="w-full bg-green-100 text-green-700 py-3 rounded-lg font-semibold btn-touch border-2 border-green-200 hover:bg-green-200">
+                <i class="fas fa-redo mr-2"></i> Repetir último: <span id="nombreUltimo"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Pantalla 2: Ajustar Monto y Pago -->
+    <div id="pantallaAjuste" class="px-4 py-6 hidden">
+        <div class="bg-white rounded-2xl p-6 shadow-xl">
+            <!-- Servicio seleccionado -->
+            <div class="text-center mb-6">
+                <div class="text-4xl mb-2" id="iconoSeleccionado">💇‍♂️</div>
+                <h2 class="text-xl font-bold text-gray-800" id="servicioSeleccionado">Fade Degradado</h2>
+            </div>
+
+            <!-- Ajuste de monto -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">💰 Monto Final</label>
+                
+                <div class="flex items-center justify-center space-x-3">
+                    <button onclick="ajustarMonto(-2000)" class="bg-red-100 text-red-600 w-12 h-12 rounded-full font-bold text-lg btn-touch hover:bg-red-200">
+                        -2K
+                    </button>
+                    <button onclick="ajustarMonto(-1000)" class="bg-red-100 text-red-600 w-12 h-12 rounded-full font-bold btn-touch hover:bg-red-200">
+                        -1K
+                    </button>
+                    
+                    <div class="bg-blue-50 px-6 py-3 rounded-xl border-2 border-blue-200">
+                        <input type="text" id="montoFinal" class="text-2xl font-bold text-blue-600 bg-transparent text-center w-24 border-none outline-none" 
+                               value="$18,000" readonly onclick="editarMonto()">
+                    </div>
+                    
+                    <button onclick="ajustarMonto(1000)" class="bg-green-100 text-green-600 w-12 h-12 rounded-full font-bold btn-touch hover:bg-green-200">
+                        +1K
+                    </button>
+                    <button onclick="ajustarMonto(2000)" class="bg-green-100 text-green-600 w-12 h-12 rounded-full font-bold text-lg btn-touch hover:bg-green-200">
+                        +2K
+                    </button>
+                </div>
+            </div>
+
+            <!-- Forma de pago -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">💳 Forma de Pago</label>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="seleccionarPago('Efectivo')" 
+                            class="pago-btn bg-green-50 text-green-700 py-4 rounded-xl font-semibold border-2 border-green-200 btn-touch hover:bg-green-100" 
+                            data-pago="Efectivo">
+                        <i class="fas fa-money-bills text-2xl mb-1"></i>
+                        <br>Efectivo
+                    </button>
+                    
+                    <button onclick="seleccionarPago('Tarjeta')" 
+                            class="pago-btn bg-blue-50 text-blue-700 py-4 rounded-xl font-semibold border-2 border-blue-200 btn-touch hover:bg-blue-100" 
+                            data-pago="Tarjeta">
+                        <i class="fas fa-credit-card text-2xl mb-1"></i>
+                        <br>Tarjeta
+                    </button>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="space-y-3">
+                <button onclick="registrarServicio()" 
+                        class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg btn-touch hover:from-green-600 hover:to-green-700 shadow-lg">
+                    <i class="fas fa-rocket mr-2"></i> ¡REGISTRAR YA!
+                </button>
+                
+                <button onclick="volverSeleccion()" 
+                        class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold btn-touch hover:bg-gray-300">
+                    <i class="fas fa-arrow-left mr-2"></i> Cambiar servicio
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla 3: Confirmación -->
+    <div id="pantallaConfirmacion" class="px-4 py-6 hidden">
+        <div class="bg-white rounded-2xl p-6 shadow-xl text-center">
+            <!-- Animación de éxito -->
+            <div class="text-8xl mb-4 bounce">✅</div>
+            
+            <h2 class="text-2xl font-bold text-green-600 mb-2">¡LISTO!</h2>
+            
+            <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                <div class="text-2xl font-bold text-gray-800 mb-2">SERVICIO #<span id="codigoGenerado">47</span></div>
+                
+                <div class="space-y-2 text-left">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Servicio:</span>
+                        <span class="font-semibold" id="resumenServicio">Fade Degradado</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Monto:</span>
+                        <span class="font-bold text-green-600" id="resumenMonto">$18,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Pago:</span>
+                        <span class="font-semibold" id="resumenPago">Efectivo</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Hora:</span>
+                        <span class="font-semibold" id="resumenHora">14:23</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acciones rápidas -->
+            <div class="space-y-3">
+                <button onclick="nuevoServicio()" 
+                        class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg btn-touch hover:bg-blue-700">
+                    <i class="fas fa-plus mr-2"></i> OTRO SERVICIO
+                </button>
+                
+                <button onclick="volverInicio()" 
+                        class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold btn-touch hover:bg-gray-300">
+                    <i class="fas fa-home mr-2"></i> Ir a Inicio
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Monto Personalizado -->
+    <div id="modalMonto" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 m-4 max-w-sm w-full">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">💰 Monto Personalizado</h3>
+            
+            <div class="mb-4">
+                <input type="number" id="montoPersonalizado" 
+                       class="w-full text-center text-2xl font-bold border-2 border-blue-300 rounded-xl py-3 px-4"
+                       placeholder="15000" min="1000" max="100000">
+            </div>
+            
+            <div class="flex space-x-3">
+                <button onclick="cerrarModalMonto()" 
+                        class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold btn-touch">
+                    Cancelar
+                </button>
+                <button onclick="aplicarMontoPersonalizado()" 
+                        class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold btn-touch">
+                    Aplicar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script principal -->
+    <script>
+        // Estado de la aplicación
+        let servicioActual = null;
+        let montoActual = 0;
+        let pagoSeleccionado = 'Efectivo';
+        
+        // Datos de servicios (simulados - en tu app vendrían de Supabase)
+        const serviciosData = [
+            { id: 1, nombre: 'Fade Degradado', icono: '💇‍♂️', precio: 18000, frecuencia: 95 },
+            { id: 2, nombre: 'Barba Premium', icono: '🧔', precio: 12000, frecuencia: 80 },
+            { id: 3, nombre: 'Corte Tijera', icono: '✂️', precio: 15000, frecuencia: 70 },
+            { id: 4, nombre: 'Servicio Full', icono: '👨', precio: 35000, frecuencia: 60 },
+            { id: 5, nombre: 'Corte Estudiante', icono: '📚', precio: 12000, frecuencia: 55 },
+            { id: 6, nombre: 'Barba Básica', icono: '🪒', precio: 8000, frecuencia: 45 },
+            { id: 7, nombre: 'Cejas', icono: '👁️', precio: 5000, frecuencia: 30 },
+            { id: 8, nombre: 'Diseños', icono: '🎨', precio: 8000, frecuencia: 25 }
+        ];
+
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', function() {
+            actualizarHora();
+            setInterval(actualizarHora, 60000); // Actualizar cada minuto
+            cargarServicios();
+            verificarUltimoServicio();
+        });
+
+        function actualizarHora() {
+            const ahora = new Date();
+            const hora = ahora.toLocaleTimeString('es-CL', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            document.getElementById('horaActual').textContent = hora;
+        }
+
+        function cargarServicios() {
+            // Ordenar por frecuencia (simulada)
+            const serviciosOrdenados = [...serviciosData].sort((a, b) => b.frecuencia - a.frecuencia);
+            
+            // Servicios más frecuentes (top 4)
+            const frecuentes = serviciosOrdenados.slice(0, 4);
+            const frecuentesHtml = frecuentes.map(servicio => `
+                <div onclick="seleccionarServicio(${servicio.id})" 
+                     class="service-card bg-white rounded-2xl p-4 shadow-md hover:shadow-lg cursor-pointer border-2 border-transparent hover:border-blue-300 transition-all">
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">${servicio.icono}</div>
+                        <h3 class="font-bold text-gray-800 text-sm mb-1">${servicio.nombre}</h3>
+                        <p class="text-precio font-bold text-blue-600">$${servicio.precio.toLocaleString('es-CL')}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('serviciosFrecuentes').innerHTML = frecuentesHtml;
+            
+            // Otros servicios (siguientes 4)
+            const otros = serviciosOrdenados.slice(4, 8);
+            const otrosHtml = otros.map(servicio => `
+                <div onclick="seleccionarServicio(${servicio.id})" 
+                     class="service-card bg-white rounded-xl p-3 shadow-sm hover:shadow-md cursor-pointer border border-gray-200 hover:border-blue-300 transition-all">
+                    <div class="text-center">
+                        <div class="text-2xl mb-1">${servicio.icono}</div>
+                        <h3 class="font-semibold text-gray-800 text-xs mb-1">${servicio.nombre}</h3>
+                        <p class="text-sm font-bold text-blue-600">$${servicio.precio.toLocaleString('es-CL')}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('otrosServicios').innerHTML = otrosHtml;
+        }
+
+        function verificarUltimoServicio() {
+            // Simulación de último servicio (en tu app sería de localStorage o BD)
+            const ultimo = localStorage.getItem('ultimoServicio');
+            if (ultimo) {
+                const data = JSON.parse(ultimo);
+                document.getElementById('nombreUltimo').textContent = data.nombre;
+                document.getElementById('ultimoServicio').classList.remove('hidden');
+            }
+        }
+
+        function seleccionarServicio(servicioId) {
+            servicioActual = serviciosData.find(s => s.id === servicioId);
+            if (!servicioActual) return;
+            
+            // Actualizar pantalla de ajuste
+            document.getElementById('iconoSeleccionado').textContent = servicioActual.icono;
+            document.getElementById('servicioSeleccionado').textContent = servicioActual.nombre;
+            montoActual = servicioActual.precio;
+            actualizarMonto();
+            
+            // Cambiar a pantalla de ajuste
+            cambiarPantalla('pantallaSeleccion', 'pantallaAjuste');
+        }
+
+        function ajustarMonto(cambio) {
+            montoActual = Math.max(1000, montoActual + cambio);
+            actualizarMonto();
+            
+            // Feedback visual
+            const montoElement = document.getElementById('montoFinal');
+            montoElement.classList.add('bounce');
+            setTimeout(() => montoElement.classList.remove('bounce'), 600);
+        }
+
+        function actualizarMonto() {
+            document.getElementById('montoFinal').value = `$${montoActual.toLocaleString('es-CL')}`;
+        }
+
+        function editarMonto() {
+            document.getElementById('montoPersonalizado').value = montoActual;
+            document.getElementById('modalMonto').classList.remove('hidden');
+        }
+
+        function cerrarModalMonto() {
+            document.getElementById('modalMonto').classList.add('hidden');
+        }
+
+        function aplicarMontoPersonalizado() {
+            const nuevoMonto = parseInt(document.getElementById('montoPersonalizado').value);
+            if (nuevoMonto && nuevoMonto >= 1000) {
+                montoActual = nuevoMonto;
+                actualizarMonto();
+            }
+            cerrarModalMonto();
+        }
+
+        function seleccionarPago(tipoPago) {
+            pagoSeleccionado = tipoPago;
+            
+            // Actualizar estilos de botones
+            document.querySelectorAll('.pago-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-100');
+                if (btn.dataset.pago === tipoPago) {
+                    btn.classList.add('ring-2', 'ring-blue-400', 'bg-blue-100');
+                }
+            });
+        }
+
+        function registrarServicio() {
+            if (!servicioActual || !pagoSeleccionado) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+
+            // Simulación de registro (en tu app sería llamada a Supabase)
+            const codigo = Math.floor(Math.random() * 900) + 100; // Código simulado
+            
+            // Guardar último servicio
+            localStorage.setItem('ultimoServicio', JSON.stringify({
+                id: servicioActual.id,
+                nombre: servicioActual.nombre,
+                precio: montoActual
+            }));
+            
+            // Actualizar pantalla de confirmación
+            document.getElementById('codigoGenerado').textContent = codigo;
+            document.getElementById('resumenServicio').textContent = servicioActual.nombre;
+            document.getElementById('resumenMonto').textContent = `$${montoActual.toLocaleString('es-CL')}`;
+            document.getElementById('resumenPago').textContent = pagoSeleccionado;
+            document.getElementById('resumenHora').textContent = document.getElementById('horaActual').textContent;
+            
+            // Cambiar a pantalla de confirmación
+            cambiarPantalla('pantallaAjuste', 'pantallaConfirmacion');
+        }
+
+        function cambiarPantalla(pantallaOcultar, pantallaRad) {
+            const ocultar = document.getElementById(pantallaOcultar);
+            const mostrar = document.getElementById(pantallaRad);
+            
+            ocultar.classList.add('slide-out');
+            setTimeout(() => {
+                ocultar.classList.add('hidden');
+                ocultar.classList.remove('slide-out');
+                
+                mostrar.classList.remove('hidden');
+                mostrar.classList.add('slide-in');
+                setTimeout(() => mostrar.classList.remove('slide-in'), 300);
+            }, 300);
+        }
+
+        function volverSeleccion() {
+            cambiarPantalla('pantallaAjuste', 'pantallaSeleccion');
+        }
+
+        function nuevoServicio() {
+            // Reset del estado
+            servicioActual = null;
+            montoActual = 0;
+            pagoSeleccionado = 'Efectivo';
+            
+            // Resetear botones de pago
+            document.querySelectorAll('.pago-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-100');
+            });
+            document.querySelector('[data-pago="Efectivo"]').classList.add('ring-2', 'ring-blue-400', 'bg-blue-100');
+            
+            // Actualizar último servicio
+            verificarUltimoServicio();
+            
+            cambiarPantalla('pantallaConfirmacion', 'pantallaSeleccion');
+        }
+
+        function repetirUltimo() {
+            const ultimo = localStorage.getItem('ultimoServicio');
+            if (ultimo) {
+                const data = JSON.parse(ultimo);
+                seleccionarServicio(data.id);
+                montoActual = data.precio;
+                actualizarMonto();
+            }
+        }
+
+        function mostrarTodosServicios() {
+            // En tu implementación real, esto abriría un modal o nueva pantalla
+            // con todos los servicios disponibles
+            alert('Aquí se mostrarían todos los servicios disponibles\n(Por implementar en la versión real)');
+        }
+
+        function volverInicio() {
+            // En tu implementación real, esto volvería al sistema principal
+            alert('Volviendo al sistema principal...\n(Integración con tu index.html)');
+        }
+
+        // Efectos adicionales para mejorar la experiencia táctil
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.classList.contains('service-card') || e.target.classList.contains('btn-touch')) {
+                e.target.style.transform = 'scale(0.95)';
+            }
+        });
+
+        document.addEventListener('touchend', function(e) {
+            if (e.target.classList.contains('service-card') || e.target.classList.contains('btn-touch')) {
+                setTimeout(() => {
+                    e.target.style.transform = 'scale(1)';
+                }, 100);
+            }
+        });
+    </script>
+</body>
+</html>
